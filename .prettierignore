@@ -1,0 +1,6 @@
+drizzle/
+dist/
+.expo/
+package-lock.json
+SPEC.md
+assets/
