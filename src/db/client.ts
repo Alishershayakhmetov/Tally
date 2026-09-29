@@ -1,12 +1,13 @@
 import { drizzle, type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
-import { openDatabaseAsync } from 'expo-sqlite';
+import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 import { Platform } from 'react-native';
 
 import migrations from '../../drizzle/migrations';
 import * as schema from './schema';
 
-export type Db = ExpoSQLiteDatabase<typeof schema>;
+/** `$client` is the raw expo-sqlite handle, used for statements with named parameters. */
+export type Db = ExpoSQLiteDatabase<typeof schema> & { $client: SQLiteDatabase };
 
 const DATABASE_NAME = 'task-counter.db';
 

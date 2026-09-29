@@ -3,11 +3,13 @@ import { randomUUID } from 'expo-crypto';
 
 import { deviceUtcOffsetMin, effectiveDayStart, logicalDate } from '@/domain/days';
 import type { ValidTaskForm } from '@/domain/input';
+import { now } from '@/lib/clock';
 
 import { getDb } from '../client';
 import { notifyDataChanged } from '../live';
 import { entries, tasks, type Task } from '../schema';
 import { getGlobalDayStartMin } from '../settings';
+import { REGROUP_TASK_SQL } from '../sql';
 
 export type TaskWithTotal = Task & { total: number };
 
@@ -21,11 +23,9 @@ function withTotals() {
     .groupBy(tasks.id);
 }
 
-export function listActiveTasks(): TaskWithTotal[] {
-  return withTotals()
-    .where(and(isNull(tasks.deletedAt), isNull(tasks.archivedAt)))
-    .orderBy(asc(tasks.sortOrder))
-    .all();
+/** Every task that isn't deleted: active, finished and archived. */
+export function listTasks(): TaskWithTotal[] {
+  return withTotals().where(isNull(tasks.deletedAt)).orderBy(asc(tasks.sortOrder)).all();
 }
 
 export function getTask(id: string): TaskWithTotal | undefined {
@@ -34,32 +34,68 @@ export function getTask(id: string): TaskWithTotal | undefined {
     .get();
 }
 
-export function createTask(input: ValidTaskForm, now = Date.now()): string {
+/** Today's logical date for a task that will use `taskDayStartMin`. */
+export function todayFor(taskDayStartMin: number | null, at = now()): string {
+  return logicalDate(
+    at,
+    deviceUtcOffsetMin(new Date(at)),
+    effectiveDayStart(taskDayStartMin, getGlobalDayStartMin()),
+  );
+}
+
+export function createTask(input: ValidTaskForm, at = now()): string {
   const id = randomUUID();
   const lastOrder =
     getDb()
       .select({ value: max(tasks.sortOrder) })
       .from(tasks)
       .get()?.value ?? 0;
-  const dayStart = effectiveDayStart(null, getGlobalDayStartMin());
   getDb()
     .insert(tasks)
     .values({
       id,
       ...input,
       measure: 'count',
-      recurrence: 'none',
-      startDate: logicalDate(now, deviceUtcOffsetMin(new Date(now)), dayStart),
+      startDate: todayFor(input.dayStartMin, at),
       sortOrder: lastOrder + 1,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: at,
+      updatedAt: at,
     })
     .run();
   notifyDataChanged();
   return id;
 }
 
-export function softDeleteTask(id: string, now = Date.now()): void {
-  getDb().update(tasks).set({ deletedAt: now, updatedAt: now }).where(eq(tasks.id, id)).run();
+/** Saves the form; a changed day start re-groups this task's history (SPEC §3.5). */
+export function updateTask(id: string, input: ValidTaskForm, at = now()): void {
+  const db = getDb();
+  const before = db.select({ dayStartMin: tasks.dayStartMin }).from(tasks).where(eq(tasks.id, id)).get();
+  if (!before) throw new Error(`task ${id} not found`);
+  db.transaction((tx) => {
+    tx.update(tasks)
+      .set({ ...input, updatedAt: at })
+      .where(eq(tasks.id, id))
+      .run();
+    if (before.dayStartMin !== input.dayStartMin) {
+      db.$client.runSync(REGROUP_TASK_SQL, {
+        ':day_start_min': effectiveDayStart(input.dayStartMin, getGlobalDayStartMin()),
+        ':task_id': id,
+      });
+    }
+  });
+  notifyDataChanged();
+}
+
+export function setArchived(id: string, archived: boolean, at = now()): void {
+  getDb()
+    .update(tasks)
+    .set({ archivedAt: archived ? at : null, updatedAt: at })
+    .where(eq(tasks.id, id))
+    .run();
+  notifyDataChanged();
+}
+
+export function softDeleteTask(id: string, at = now()): void {
+  getDb().update(tasks).set({ deletedAt: at, updatedAt: at }).where(eq(tasks.id, id)).run();
   notifyDataChanged();
 }

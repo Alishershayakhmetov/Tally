@@ -55,6 +55,12 @@ export const entries = sqliteTable(
   ],
 );
 
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export type Task = typeof tasks.$inferSelect;
 export type Entry = typeof entries.$inferSelect;
 export type EntrySource = Entry['source'];

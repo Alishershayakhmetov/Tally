@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme';
+import { useThemedStyles } from '@/lib/theme';
+import { radius, spacing, type Colors } from '@/theme';
 
 const VISIBLE_MS = 4000;
 
@@ -15,6 +17,9 @@ type Props = {
 };
 
 export function UndoBar({ message, resetKey, bottomInset, onUndo, onTimeout }: Props) {
+  const { t } = useTranslation();
+  const styles = useThemedStyles(makeStyles);
+
   useEffect(() => {
     const timer = setTimeout(onTimeout, VISIBLE_MS);
     return () => clearTimeout(timer);
@@ -26,35 +31,37 @@ export function UndoBar({ message, resetKey, bottomInset, onUndo, onTimeout }: P
         {message}
       </Text>
       <Pressable onPress={onUndo} hitSlop={12} accessibilityRole="button">
-        <Text style={styles.undo}>UNDO</Text>
+        <Text style={styles.undo}>{t('common.undo')}</Text>
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  bar: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    backgroundColor: colors.text,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  message: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontVariant: ['tabular-nums'],
-  },
-  undo: {
-    color: '#7CC4FF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
+function makeStyles(c: Colors) {
+  return StyleSheet.create({
+    bar: {
+      position: 'absolute',
+      left: spacing.lg,
+      right: spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      backgroundColor: c.snackbar,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    message: {
+      flex: 1,
+      color: c.snackbarText,
+      fontSize: 15,
+      fontVariant: ['tabular-nums'],
+    },
+    undo: {
+      color: c.snackbarAction,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+  });
+}

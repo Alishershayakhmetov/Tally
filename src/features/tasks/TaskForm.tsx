@@ -1,0 +1,459 @@
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { CalendarDialog } from '@/components/CalendarDialog';
+import { Segmented } from '@/components/Segmented';
+import { TaskBadge } from '@/components/TaskBadge';
+import { TimeStepper } from '@/components/TimeStepper';
+import { WeekdayPicker } from '@/components/WeekdayPicker';
+import { useSettings } from '@/db/settings';
+import { formatSigned } from '@/domain/format';
+import {
+  parseIncrements,
+  validateTaskForm,
+  type InputError,
+  type TaskFormErrors,
+  type TaskFormValues,
+  type ValidTaskForm,
+} from '@/domain/input';
+import type { Recurrence } from '@/domain/periods';
+import { clampDayStart, formatMinutes } from '@/domain/settings';
+import { formatDate, formatError } from '@/i18n/format';
+import { readableOn } from '@/lib/contrast';
+import { useColors, useThemedStyles } from '@/lib/theme';
+import { useWeekStart } from '@/lib/weekStart';
+import { radius, spacing, TASK_COLORS, TASK_EMOJIS, type Colors } from '@/theme';
+
+type Props = {
+  initial: TaskFormValues;
+  /** The task's start date: the earliest allowed end date. */
+  startDate: string;
+  submitLabel: string;
+  onSubmit: (value: ValidTaskForm) => void;
+  footer?: ReactNode;
+};
+
+export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: Props) {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const styles = useThemedStyles(makeStyles);
+  const settings = useSettings();
+  const weekStart = useWeekStart();
+  const [values, setValues] = useState(initial);
+  const [errors, setErrors] = useState<TaskFormErrors>({});
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const incrementsPreview = parseIncrements(values.increments);
+  const accentText = readableOn(values.color, colors.surface, colors.text);
+
+  function set<K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) {
+    update(key, () => value);
+  }
+
+  /** Derives the new value from the latest state, so taps between renders don't overwrite each other. */
+  function update<K extends keyof TaskFormValues>(key: K, next: (v: TaskFormValues) => TaskFormValues[K]) {
+    setValues((v) => ({ ...v, [key]: next(v) }));
+    setErrors((e) => (key in e ? { ...e, [key]: undefined } : e));
+  }
+
+  function submit() {
+    const result = validateTaskForm(values, startDate);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    onSubmit(result.value);
+  }
+
+  const targetHint: Record<Recurrence, string> = {
+    none: t('form.targetTotal'),
+    daily: t('form.targetDaily'),
+    weekly: t('form.targetWeekly'),
+    monthly: t('form.targetMonthly'),
+  };
+
+  return (
+    <ScrollView
+      contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + spacing.xxl }]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.preview}>
+        <TaskBadge emoji={values.emoji} name={values.name || '?'} color={values.color} size={56} />
+        <Text style={styles.previewName} numberOfLines={1}>
+          {values.name.trim() || t('screens.newTask')}
+        </Text>
+      </View>
+
+      <Field label={t('form.name')} error={errors.name}>
+        <TextInput
+          value={values.name}
+          onChangeText={(text) => set('name', text)}
+          placeholder={t('form.namePlaceholder')}
+          placeholderTextColor={colors.textMuted}
+          autoFocus={!initial.name}
+          maxLength={60}
+          style={styles.input}
+          accessibilityLabel={t('form.name')}
+        />
+      </Field>
+
+      <Field label={t('form.goal')}>
+        <Segmented<Recurrence>
+          accessibilityLabel={t('form.goal')}
+          value={values.recurrence}
+          onChange={(recurrence) => set('recurrence', recurrence)}
+          options={[
+            { value: 'none', label: t('form.goalTotal') },
+            { value: 'daily', label: t('form.goalDaily') },
+            { value: 'weekly', label: t('form.goalWeekly') },
+            { value: 'monthly', label: t('form.goalMonthly') },
+          ]}
+        />
+      </Field>
+
+      <Field
+        label={t('form.target')}
+        error={errors.target ?? errors.unitLabel}
+        hint={targetHint[values.recurrence]}
+      >
+        <View style={styles.targetRow}>
+          <TextInput
+            value={values.target}
+            onChangeText={(text) => set('target', text)}
+            placeholder={t('form.targetPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            style={[styles.input, styles.targetInput]}
+            accessibilityLabel={t('form.target')}
+          />
+          <TextInput
+            value={values.unitLabel}
+            onChangeText={(text) => set('unitLabel', text)}
+            placeholder={t('form.unitPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={30}
+            style={[styles.input, styles.unitInput]}
+            accessibilityLabel={t('form.unit')}
+          />
+        </View>
+      </Field>
+
+      {values.recurrence === 'daily' ? (
+        <Field label={t('form.days')} error={errors.weekdayMask} hint={t('form.daysHint')}>
+          <WeekdayPicker
+            mask={values.weekdayMask}
+            weekStart={weekStart}
+            accent={values.color}
+            onToggle={(bit) => update('weekdayMask', (v) => v.weekdayMask ^ bit)}
+          />
+        </Field>
+      ) : null}
+
+      <Field
+        label={values.recurrence === 'none' ? t('form.deadline') : t('form.endsOn')}
+        error={errors.endDate}
+      >
+        <View style={styles.dateRow}>
+          <Pressable
+            onPress={() => setCalendarOpen(true)}
+            style={[styles.input, styles.dateButton]}
+            accessibilityRole="button"
+            accessibilityLabel={values.recurrence === 'none' ? t('form.deadline') : t('form.endsOn')}
+          >
+            <Text style={values.endDate ? styles.dateText : styles.datePlaceholder}>
+              {values.endDate ? formatDate(t, values.endDate, startDate) : t('form.pickDate')}
+            </Text>
+          </Pressable>
+          {values.endDate ? (
+            <Pressable
+              onPress={() => set('endDate', null)}
+              style={styles.clearButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('form.clearDate')}
+            >
+              <Text style={styles.clearText}>×</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </Field>
+
+      <Field label={t('form.dayStart')} error={errors.dayStartMin} hint={t('form.dayStartHint')}>
+        <Segmented<'default' | 'custom'>
+          accessibilityLabel={t('form.dayStart')}
+          value={values.dayStartMin === null ? 'default' : 'custom'}
+          onChange={(mode) => set('dayStartMin', mode === 'default' ? null : settings.dayStartMin)}
+          options={[
+            {
+              value: 'default',
+              label: t('form.dayStartDefault', { time: formatMinutes(settings.dayStartMin) }),
+            },
+            { value: 'custom', label: t('form.dayStartCustom') },
+          ]}
+        />
+        {values.dayStartMin !== null ? (
+          <TimeStepper
+            minutes={values.dayStartMin}
+            onStep={(delta) => update('dayStartMin', (v) => clampDayStart((v.dayStartMin ?? 0) + delta))}
+            earlierLabel={t('form.earlier')}
+            laterLabel={t('form.later')}
+          />
+        ) : null}
+      </Field>
+
+      <Field label={t('form.icon')}>
+        <View style={styles.chips}>
+          {TASK_EMOJIS.map((emoji) => (
+            <Pressable
+              key={emoji}
+              onPress={() => set('emoji', values.emoji === emoji ? null : emoji)}
+              style={[styles.emojiChip, values.emoji === emoji && { borderColor: values.color }]}
+              accessibilityRole="radio"
+              aria-checked={values.emoji === emoji}
+              accessibilityLabel={t('form.iconLabel', { emoji })}
+            >
+              <Text style={styles.emoji}>{emoji}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Field>
+
+      <Field label={t('form.color')}>
+        <View style={styles.chips}>
+          {TASK_COLORS.map((color) => (
+            <Pressable
+              key={color}
+              onPress={() => set('color', color)}
+              style={[
+                styles.swatch,
+                { backgroundColor: color },
+                values.color === color && styles.swatchSelected,
+              ]}
+              accessibilityRole="radio"
+              aria-checked={values.color === color}
+              accessibilityLabel={t('form.colorLabel', { color })}
+            />
+          ))}
+        </View>
+      </Field>
+
+      <Field label={t('form.buttons')} error={errors.increments} hint={t('form.buttonsHint')}>
+        <TextInput
+          value={values.increments}
+          onChangeText={(text) => set('increments', text)}
+          placeholder="-1, 1, 5, 10"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={styles.input}
+          accessibilityLabel={t('form.buttonsLabel')}
+        />
+        {incrementsPreview.ok ? (
+          <View style={styles.chips}>
+            {incrementsPreview.value.map((n) => (
+              <View
+                key={n}
+                style={[
+                  styles.incrementChip,
+                  n > 0 ? { backgroundColor: values.color } : { borderColor: values.color, borderWidth: 1.5 },
+                ]}
+              >
+                <Text style={[styles.incrementText, { color: n > 0 ? '#FFFFFF' : accentText }]}>
+                  {formatSigned(n)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </Field>
+
+      <Pressable
+        onPress={submit}
+        style={({ pressed }) => [styles.save, { backgroundColor: values.color }, pressed && styles.pressed]}
+        accessibilityRole="button"
+      >
+        <Text style={styles.saveText}>{submitLabel}</Text>
+      </Pressable>
+
+      {footer}
+
+      {calendarOpen ? (
+        <CalendarDialog
+          visible
+          value={values.endDate}
+          minDate={startDate}
+          weekStart={weekStart}
+          accent={values.color}
+          onSelect={(date) => set('endDate', date)}
+          onClose={() => setCalendarOpen(false)}
+        />
+      ) : null}
+    </ScrollView>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  error?: InputError;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      {children}
+      {error ? (
+        <Text style={styles.error}>{formatError(t, error)}</Text>
+      ) : hint ? (
+        <Text style={styles.hint}>{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function makeStyles(c: Colors) {
+  return StyleSheet.create({
+    form: {
+      padding: spacing.lg,
+      gap: spacing.xl,
+    },
+    preview: {
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    previewName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.text,
+    },
+    field: {
+      gap: spacing.sm,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.text,
+    },
+    hint: {
+      fontSize: 13,
+      color: c.textMuted,
+    },
+    error: {
+      fontSize: 13,
+      color: c.danger,
+    },
+    input: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      fontSize: 16,
+      color: c.text,
+    },
+    targetRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    // minWidth 0 lets inputs shrink below their intrinsic width in a row.
+    targetInput: {
+      flex: 2,
+      minWidth: 0,
+      fontVariant: ['tabular-nums'],
+    },
+    unitInput: {
+      flex: 3,
+      minWidth: 0,
+    },
+    dateRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    dateButton: {
+      flex: 1,
+      minWidth: 0,
+    },
+    dateText: {
+      fontSize: 16,
+      color: c.text,
+    },
+    datePlaceholder: {
+      fontSize: 16,
+      color: c.textMuted,
+    },
+    clearButton: {
+      width: 48,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    clearText: {
+      fontSize: 22,
+      color: c.textMuted,
+    },
+    chips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    emojiChip: {
+      width: 48,
+      height: 48,
+      borderRadius: radius.md,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emoji: {
+      fontSize: 24,
+    },
+    swatch: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.pill,
+    },
+    swatchSelected: {
+      borderWidth: 3,
+      borderColor: c.surface,
+      outlineWidth: 2,
+      outlineColor: c.text,
+      outlineStyle: 'solid',
+    },
+    incrementChip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+    },
+    incrementText: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    save: {
+      borderRadius: radius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    saveText: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontWeight: '700',
+    },
+  });
+}

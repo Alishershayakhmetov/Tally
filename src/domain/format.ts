@@ -1,8 +1,6 @@
 import { addDays } from './days';
-import { computeProgress } from './progress';
 
 const MINUS = '−';
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function formatCount(n: number): string {
   return n < 0 ? `${MINUS}${Math.abs(n)}` : String(n);
@@ -12,15 +10,12 @@ export function formatSigned(n: number): string {
   return n > 0 ? `+${n}` : formatCount(n);
 }
 
-/** "640 / 1000 push-ups" */
+/**
+ * "640 / 1000 · push-ups". The unit is user-typed text that can't be pluralised
+ * (e.g. Russian "отжимания"), so it sits after a separator (SPEC §7).
+ */
 export function formatProgressLine(total: number, target: number, unitLabel: string | null): string {
-  return `${formatCount(total)} / ${target}${unitLabel ? ` ${unitLabel}` : ''}`;
-}
-
-/** "64% · 360 left" or "104% · done" */
-export function formatStatusLine(total: number, target: number): string {
-  const p = computeProgress(total, target);
-  return p.done ? `${p.percent}% · done` : `${p.percent}% · ${p.remaining} left`;
+  return `${formatCount(total)} / ${target}${unitLabel ? ` · ${unitLabel}` : ''}`;
 }
 
 export function formatClock(occurredAtMs: number, utcOffsetMin: number): string {
@@ -30,10 +25,15 @@ export function formatClock(occurredAtMs: number, utcOffsetMin: number): string 
   return `${hh}:${mm}`;
 }
 
-export function formatDayLabel(localDate: string, today: string): string {
-  if (localDate === today) return 'Today';
-  if (localDate === addDays(today, -1)) return 'Yesterday';
+export type DayDescription =
+  | { kind: 'today' }
+  | { kind: 'yesterday' }
+  /** month is 0-based; year is null when it matches today's year. */
+  | { kind: 'date'; day: number; month: number; year: number | null };
+
+export function describeDay(localDate: string, today: string): DayDescription {
+  if (localDate === today) return { kind: 'today' };
+  if (localDate === addDays(today, -1)) return { kind: 'yesterday' };
   const [year, month, day] = localDate.split('-').map(Number);
-  const label = `${MONTHS[month - 1]} ${day}`;
-  return year === Number(today.slice(0, 4)) ? label : `${label}, ${year}`;
+  return { kind: 'date', day, month: month - 1, year: year === Number(today.slice(0, 4)) ? null : year };
 }

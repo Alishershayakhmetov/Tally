@@ -1,23 +1,43 @@
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { TaskWithTotal } from '@/db/repos/tasks';
-import { formatProgressLine, formatStatusLine } from '@/domain/format';
-import { computeProgress } from '@/domain/progress';
-import { colors, radius, spacing } from '@/theme';
+import { formatCount, formatProgressLine } from '@/domain/format';
+import { deadlineText, endedStatusText, statusText, windowLabel } from '@/features/tasks/goalText';
+import type { TaskView } from '@/features/tasks/taskViews';
+import { useThemedStyles } from '@/lib/theme';
+import { radius, spacing, type Colors } from '@/theme';
 
 import { ProgressBar } from './ProgressBar';
 import { TaskBadge } from './TaskBadge';
 
-export function TaskCard({ task }: { task: TaskWithTotal }) {
-  const progress = computeProgress(task.total, task.target);
-  const progressLine = formatProgressLine(task.total, task.target, task.unitLabel);
+export function TaskCard({ view }: { view: TaskView }) {
+  const { t } = useTranslation();
+  const styles = useThemedStyles(makeStyles);
+  const { task, goal, lifecycle, summary } = view;
+  const { progress, restDay } = goal;
+  const active = lifecycle === 'active';
+
+  // An ended repeating goal has no meaningful current period, so show its all-time total.
+  const progressLine =
+    !active && task.recurrence !== 'none'
+      ? `${t('goal.allTime', { count: formatCount(task.total) })}${task.unitLabel ? ` · ${task.unitLabel}` : ''}`
+      : formatProgressLine(progress.total, progress.target, task.unitLabel);
+  const subline = active
+    ? [windowLabel(t, task.recurrence), deadlineText(t, view)].filter(Boolean).join(' · ')
+    : lifecycle === 'finished'
+      ? endedStatusText(t, view)
+      : [t('goal.archivedLabel'), endedStatusText(t, view)].join(' · ');
+  const fraction = summary && summary.total > 0 ? summary.met / summary.total : progress.fraction;
+
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, !active && styles.inactive, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={`${task.name}, ${progressLine}, ${formatStatusLine(task.total, task.target)}`}
+      accessibilityLabel={[task.name, progressLine, subline, active ? statusText(t, view) : null]
+        .filter(Boolean)
+        .join(', ')}
     >
       <View style={styles.row}>
         <TaskBadge emoji={task.emoji} name={task.name} color={task.color} />
@@ -28,64 +48,85 @@ export function TaskCard({ task }: { task: TaskWithTotal }) {
           <Text style={styles.meta} numberOfLines={1}>
             {progressLine}
           </Text>
+          {subline ? (
+            <Text style={styles.sub} numberOfLines={1}>
+              {subline}
+            </Text>
+          ) : null}
         </View>
-        {progress.done ? (
-          <Text style={[styles.status, { color: colors.positive }]}>✓ {progress.percent}%</Text>
-        ) : (
-          <View style={styles.statusBox}>
-            <Text style={styles.status}>{progress.percent}%</Text>
-            <Text style={styles.remaining}>{progress.remaining} left</Text>
-          </View>
-        )}
+        {active ? (
+          restDay && !progress.done ? (
+            <Text style={styles.remaining}>{t('goal.restDay')}</Text>
+          ) : progress.done ? (
+            <Text style={[styles.status, styles.done]}>✓ {progress.percent}%</Text>
+          ) : (
+            <View style={styles.statusBox}>
+              <Text style={styles.status}>{progress.percent}%</Text>
+              <Text style={styles.remaining}>{t('goal.left', { count: progress.remaining })}</Text>
+            </View>
+          )
+        ) : null}
       </View>
-      <ProgressBar fraction={progress.fraction} color={task.color} />
+      <ProgressBar fraction={fraction} color={task.color} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  text: {
-    flex: 1,
-    gap: 2,
-  },
-  name: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  meta: {
-    fontSize: 14,
-    color: colors.textMuted,
-    fontVariant: ['tabular-nums'],
-  },
-  statusBox: {
-    alignItems: 'flex-end',
-  },
-  status: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    fontVariant: ['tabular-nums'],
-  },
-  remaining: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontVariant: ['tabular-nums'],
-  },
-});
+function makeStyles(c: Colors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      gap: spacing.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    inactive: {
+      opacity: 0.75,
+    },
+    pressed: {
+      opacity: 0.6,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    text: {
+      flex: 1,
+      gap: 2,
+    },
+    name: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: c.text,
+    },
+    meta: {
+      fontSize: 14,
+      color: c.textMuted,
+      fontVariant: ['tabular-nums'],
+    },
+    sub: {
+      fontSize: 13,
+      color: c.textMuted,
+    },
+    statusBox: {
+      alignItems: 'flex-end',
+    },
+    status: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: c.text,
+      fontVariant: ['tabular-nums'],
+    },
+    done: {
+      color: c.positive,
+    },
+    remaining: {
+      fontSize: 12,
+      color: c.textMuted,
+      fontVariant: ['tabular-nums'],
+    },
+  });
+}

@@ -1,10 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 
-import { colors, radius } from '@/theme';
+import { useThemedStyles } from '@/lib/theme';
+import { radius, type Colors } from '@/theme';
 
 type Props = { fraction: number; color: string; height?: number };
 
 export function ProgressBar({ fraction, color, height = 8 }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
   return (
     <View
@@ -17,15 +19,17 @@ export function ProgressBar({ fraction, color, height = 8 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  track: {
-    width: '100%',
-    backgroundColor: colors.track,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    borderRadius: radius.pill,
-  },
-});
+function makeStyles(c: Colors) {
+  return StyleSheet.create({
+    track: {
+      width: '100%',
+      backgroundColor: c.track,
+      borderRadius: radius.pill,
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      borderRadius: radius.pill,
+    },
+  });
+}

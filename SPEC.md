@@ -1,6 +1,6 @@
 # Task Counter App: Specification
 
-> Status: **spec only, nothing built yet** · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
+> Status: **Phases 0–1 built** (browser-verified, not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
 > Working title: *Task Counter* (final name TBD)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
@@ -297,6 +297,13 @@ Each phase ends with verification **on the real Android phone**, not just "it co
 - History screen (grouped by day, edit / delete)
 - i18n EN/RU, dark mode, Settings, including **week starts on** and the global **new day starts at**, plus the **per-task cutoff override** and history re-grouping (§3.5)
 - **Done when:** period boundary tests pass (month end, leap day, Sunday and Monday week start, day-start cutoff, DST). On the phone, a daily task rolls over at the chosen day-start time, not at midnight. This is checked with a **dev-only clock override**, because the cutoff can't be set to an afternoon time. Switching the week start re-groups the current week. Changing the global cutoff re-groups the history of tasks without an override and leaves overridden tasks untouched. The UI is fully usable in Russian with correct plurals.
+
+**Decisions made while building Phase 1** (not specified above):
+- Finished tasks are read-only: buttons and "Enter amount" are disabled until the end date is moved. Archived tasks likewise, with a Restore button on the counter screen.
+- An ended (finished or archived) repeating goal has no meaningful "today", so its card and counter show the all-time total and "N of M days/weeks/months met". Partial weeks/months at the start and end count as whole periods.
+- Logging on a rest day is allowed and counts toward that day. It just has no quota.
+- Russian "360 left" is phrased "ещё 360", which needs no plural agreement.
+- Dragging a cutoff stepper re-groups history on every 15-minute step. It's cheap, and the result is always consistent with what's shown.
 
 ### Phase 2: time and reminders (completes v1)
 - Duration measure: persisted stopwatch, manual `mm:ss`, minute-based buttons

@@ -1,5 +1,22 @@
-// Light theme only in Phase 0; dark mode arrives with Settings in Phase 1.
-export const colors = {
+export type Colors = {
+  scheme: 'light' | 'dark';
+  background: string;
+  surface: string;
+  text: string;
+  textMuted: string;
+  border: string;
+  track: string;
+  primary: string;
+  danger: string;
+  positive: string;
+  scrim: string;
+  snackbar: string;
+  snackbarText: string;
+  snackbarAction: string;
+};
+
+export const lightColors: Colors = {
+  scheme: 'light',
   background: '#F6F7F9',
   surface: '#FFFFFF',
   text: '#11181C',
@@ -10,7 +27,27 @@ export const colors = {
   danger: '#C5221F',
   positive: '#15803D',
   scrim: 'rgba(17, 24, 28, 0.45)',
-} as const;
+  snackbar: '#11181C',
+  snackbarText: '#FFFFFF',
+  snackbarAction: '#7CC4FF',
+};
+
+export const darkColors: Colors = {
+  scheme: 'dark',
+  background: '#0E1113',
+  surface: '#1A1E22',
+  text: '#ECEEF0',
+  textMuted: '#9BA1A6',
+  border: '#2B3035',
+  track: '#2B3035',
+  primary: '#2563EB',
+  danger: '#F87171',
+  positive: '#4ADE80',
+  scrim: 'rgba(0, 0, 0, 0.6)',
+  snackbar: '#ECEEF0',
+  snackbarText: '#11181C',
+  snackbarAction: '#1D4ED8',
+};
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
