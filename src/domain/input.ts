@@ -1,5 +1,7 @@
-import { isValidDayStart } from './settings';
+import { parseDurationText, type Measure } from './measure';
 import type { Recurrence } from './periods';
+import { parseReminderTime } from './reminders';
+import { isValidDayStart } from './settings';
 
 export const DEFAULT_INCREMENTS = [-1, 1, 5, 10];
 export const MAX_INCREMENTS = 6;
@@ -11,6 +13,9 @@ export const MAX_UNIT_LENGTH = 30;
 export type InputError = {
   code:
     | 'amountNotInteger'
+    | 'durationInvalid'
+    | 'durationTargetInvalid'
+    | 'reminderInvalid'
     | 'amountZero'
     | 'amountTooLarge'
     | 'targetInvalid'
@@ -42,17 +47,22 @@ export function parseSignedInt(text: string): number | null {
   return match[1] === '-' || match[1] === '−' ? -magnitude : magnitude;
 }
 
-export function parseAmount(text: string): Result<number> {
-  const value = parseSignedInt(text);
-  if (value === null) return { ok: false, error: { code: 'amountNotInteger' } };
+/** A count, or for time goals minutes / m:ss / h:mm:ss (returned in seconds). */
+export function parseAmount(text: string, measure: Measure = 'count'): Result<number> {
+  const value = measure === 'duration' ? parseDurationText(text) : parseSignedInt(text);
+  if (value === null) {
+    return { ok: false, error: { code: measure === 'duration' ? 'durationInvalid' : 'amountNotInteger' } };
+  }
   if (value === 0) return { ok: false, error: { code: 'amountZero' } };
   if (Math.abs(value) > MAX_ABS_AMOUNT) return { ok: false, error: { code: 'amountTooLarge' } };
   return { ok: true, value };
 }
 
-export function parseTarget(text: string): Result<number> {
-  const value = parseSignedInt(text);
-  if (value === null || value <= 0) return { ok: false, error: { code: 'targetInvalid' } };
+export function parseTarget(text: string, measure: Measure = 'count'): Result<number> {
+  const value = measure === 'duration' ? parseDurationText(text) : parseSignedInt(text);
+  if (value === null || value <= 0) {
+    return { ok: false, error: { code: measure === 'duration' ? 'durationTargetInvalid' : 'targetInvalid' } };
+  }
   if (value > MAX_ABS_AMOUNT) return { ok: false, error: { code: 'targetTooLarge' } };
   return { ok: true, value };
 }
@@ -86,8 +96,12 @@ export type TaskFormValues = {
   name: string;
   emoji: string | null;
   color: string;
+  measure: Measure;
+  /** Counts only; ignored for time goals. */
   unitLabel: string;
+  /** A number, or for time goals minutes / m:ss / h:mm:ss. */
   target: string;
+  /** Units, or minutes for time goals. */
   increments: string;
   recurrence: Recurrence;
   /** Only used for daily goals. */
@@ -95,23 +109,28 @@ export type TaskFormValues = {
   endDate: string | null;
   /** null = follow the global default. */
   dayStartMin: number | null;
+  /** 'HH:MM', or null for no reminder. */
+  reminderTime: string | null;
 };
 
 export type ValidTaskForm = {
   name: string;
   emoji: string | null;
   color: string;
+  measure: Measure;
   unitLabel: string | null;
+  /** Units, or seconds for time goals. */
   target: number;
   increments: number[];
   recurrence: Recurrence;
   weekdayMask: number | null;
   endDate: string | null;
   dayStartMin: number | null;
+  reminderTime: string | null;
 };
 
 export type TaskFormField =
-  'name' | 'unitLabel' | 'target' | 'increments' | 'weekdayMask' | 'endDate' | 'dayStartMin';
+  'name' | 'unitLabel' | 'target' | 'increments' | 'weekdayMask' | 'endDate' | 'dayStartMin' | 'reminderTime';
 export type TaskFormErrors = Partial<Record<TaskFormField, InputError>>;
 
 /** `startDate` is the task's start (today for a new task), which an end date cannot precede. */
@@ -121,7 +140,7 @@ export function validateTaskForm(
 ): { ok: true; value: ValidTaskForm } | { ok: false; errors: TaskFormErrors } {
   const errors: TaskFormErrors = {};
   const name = values.name.trim();
-  const unitLabel = values.unitLabel.trim();
+  const unitLabel = values.measure === 'duration' ? '' : values.unitLabel.trim();
 
   if (!name) errors.name = { code: 'nameRequired' };
   else if (name.length > MAX_NAME_LENGTH)
@@ -129,7 +148,7 @@ export function validateTaskForm(
   if (unitLabel.length > MAX_UNIT_LENGTH)
     errors.unitLabel = { code: 'unitTooLong', params: { max: MAX_UNIT_LENGTH } };
 
-  const target = parseTarget(values.target);
+  const target = parseTarget(values.target, values.measure);
   if (!target.ok) errors.target = target.error;
   const increments = parseIncrements(values.increments);
   if (!increments.ok) errors.increments = increments.error;
@@ -141,6 +160,8 @@ export function validateTaskForm(
   }
   if (values.dayStartMin !== null && !isValidDayStart(values.dayStartMin))
     errors.dayStartMin = { code: 'dayStartInvalid' };
+  if (values.reminderTime !== null && parseReminderTime(values.reminderTime) === null)
+    errors.reminderTime = { code: 'reminderInvalid' };
 
   if (!target.ok || !increments.ok || Object.keys(errors).length > 0) return { ok: false, errors };
   return {
@@ -149,6 +170,7 @@ export function validateTaskForm(
       name,
       emoji: values.emoji,
       color: values.color,
+      measure: values.measure,
       unitLabel: unitLabel || null,
       target: target.value,
       increments: increments.value,
@@ -156,6 +178,7 @@ export function validateTaskForm(
       weekdayMask: daily && values.weekdayMask !== 127 ? values.weekdayMask & 127 : null,
       endDate: values.endDate,
       dayStartMin: values.dayStartMin,
+      reminderTime: values.reminderTime,
     },
   };
 }

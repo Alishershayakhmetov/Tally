@@ -20,10 +20,11 @@
     "newTask": "New task",
     "finished": "Finished",
     "archived": "Archived",
-    "openSettings": "Settings"
+    "openSettings": "Settings",
+    "timerBanner": "Stopwatch · {{name}} · {{time}}"
   },
   "goal": {
-    "left": "{{count}} left",
+    "left": "{{amount}} left",
     "done": "done",
     "today": "today",
     "thisWeek": "this week",
@@ -42,7 +43,7 @@
     "weeksMet_other": "{{met}} of {{count}} weeks met",
     "monthsMet_one": "{{met}} of {{count}} month met",
     "monthsMet_other": "{{met}} of {{count}} months met",
-    "allTime": "All time: {{count}}",
+    "allTime": "All time: {{amount}}",
     "allTimeLabel": "All time",
     "archivedLabel": "Archived"
   },
@@ -62,7 +63,18 @@
     "total": "Total {{count}}",
     "deleteEntryTitle": "Delete {{amount}}?",
     "deleteEntryBody": "Logged {{day}} at {{time}}.",
-    "missing": "This task no longer exists."
+    "missing": "This task no longer exists.",
+    "min": "min",
+    "start": "Start stopwatch",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop and log",
+    "discard": "Discard",
+    "discardTitle": "Discard this timer?",
+    "discardBody": "The time won’t be logged.",
+    "otherTimer": "The stopwatch is running for “{{name}}”.",
+    "timerTag": "stopwatch",
+    "timerLabel": "Stopwatch"
   },
   "amount": {
     "title": "Enter amount",
@@ -71,7 +83,9 @@
     "placeholder": "e.g. 37",
     "toggleSign": "Toggle minus sign",
     "label": "Amount",
-    "close": "Close"
+    "close": "Close",
+    "hintTime": "Minutes (e.g. 25) or m:ss. A negative value corrects a mistake.",
+    "placeholderTime": "e.g. 25 or 1:30"
   },
   "form": {
     "name": "Name",
@@ -115,7 +129,23 @@
     "deleteTitle": "Delete “{{name}}”?",
     "deleteBody": "The task and its history will be removed from this device.",
     "earlier": "Earlier",
-    "later": "Later"
+    "later": "Later",
+    "measure": "Measure",
+    "measureCount": "Count",
+    "measureTime": "Time",
+    "targetTimeHint": "Minutes (e.g. 60) or h:mm:ss.",
+    "targetPlaceholderTime": "60",
+    "buttonsHintTime": "Up to 6 whole numbers of minutes, separated by commas. Negative ones subtract.",
+    "reminder": "Reminder",
+    "reminderOff": "Off",
+    "reminderOn": "On",
+    "reminderHint": "Skipped when that day’s or period’s goal is already met.",
+    "reminderWeb": "Reminders only work in the phone app.",
+    "reminderDenied": "Notifications are turned off for this app in system settings.",
+    "hourEarlier": "Earlier hour",
+    "hourLater": "Later hour",
+    "minuteEarlier": "Earlier minutes",
+    "minuteLater": "Later minutes"
   },
   "errors": {
     "amountNotInteger": "Enter a whole number, e.g. 37 or -5",
@@ -133,7 +163,10 @@
     "unitTooLong": "At most {{max}} characters",
     "weekdaysEmpty": "Pick at least one day",
     "endBeforeStart": "The end date can’t be before the start ({{date}})",
-    "dayStartInvalid": "Pick a time between 00:00 and 12:00"
+    "dayStartInvalid": "Pick a time between 00:00 and 12:00",
+    "durationInvalid": "Enter minutes, or m:ss / h:mm:ss",
+    "durationTargetInvalid": "Target must be a time above 0, e.g. 60 or 1:00:00",
+    "reminderInvalid": "Pick a time"
   },
   "history": {
     "empty": "Nothing logged yet.",
@@ -156,7 +189,14 @@
     "clockOffset": "Offset: {{hours}} h",
     "plusHour": "+1 h",
     "plusDay": "+1 day",
-    "resetClock": "Reset"
+    "resetClock": "Reset",
+    "notifications": "Notifications",
+    "notificationsGranted": "Allowed",
+    "notificationsDenied": "Blocked in system settings",
+    "notificationsUndetermined": "Not asked yet",
+    "allow": "Allow",
+    "notificationsWeb": "Not available in the browser",
+    "reminderNote": "Reminders are planned two weeks ahead and refreshed whenever you open the app."
   },
   "date": {
     "today": "Today",
@@ -183,5 +223,12 @@
     "weekdaysLong": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     "previousMonth": "Previous month",
     "nextMonth": "Next month"
+  },
+  "reminder": {
+    "channel": "Reminders",
+    "bodyDaily": "{{remaining}} left today",
+    "bodyWeekly": "{{remaining}} left this week",
+    "bodyMonthly": "{{remaining}} left this month",
+    "bodyTotal": "{{remaining}} to go"
   }
 }

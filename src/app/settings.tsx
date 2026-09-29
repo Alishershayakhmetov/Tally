@@ -11,6 +11,7 @@ import { formatClock } from '@/domain/format';
 import type { WeekStartPref } from '@/domain/periods';
 import { clampDayStart, type LanguagePref, type ThemePref } from '@/domain/settings';
 import { setClockOffsetMs, useClockOffsetMs, useNow } from '@/lib/clock';
+import { useNotificationPermission } from '@/notifications/scheduler';
 import { useThemedStyles } from '@/lib/theme';
 import { localeFirstWeekday } from '@/lib/weekStart';
 import { radius, spacing, type Colors } from '@/theme';
@@ -75,10 +76,39 @@ export default function SettingsScreen() {
         />
       </Row>
 
+      <NotificationsRow />
+
       <Text style={styles.note}>{t('settings.storage')}</Text>
 
       {__DEV__ ? <DeveloperTools /> : null}
     </ScrollView>
+  );
+}
+
+function NotificationsRow() {
+  const { t } = useTranslation();
+  const styles = useThemedStyles(makeStyles);
+  const [permission, request] = useNotificationPermission();
+  const status =
+    permission === 'granted'
+      ? t('settings.notificationsGranted')
+      : permission === 'denied'
+        ? t('settings.notificationsDenied')
+        : permission === 'unavailable'
+          ? t('settings.notificationsWeb')
+          : t('settings.notificationsUndetermined');
+  return (
+    <Row
+      label={t('settings.notifications')}
+      hint={permission === 'unavailable' ? undefined : t('settings.reminderNote')}
+    >
+      <View style={styles.statusRow}>
+        <Text style={styles.dev}>{permission === null ? '…' : status}</Text>
+        {permission === 'undetermined' ? (
+          <DevButton label={t('settings.allow')} onPress={() => void request()} />
+        ) : null}
+      </View>
+    </Row>
   );
 }
 
@@ -152,6 +182,12 @@ function makeStyles(c: Colors) {
       fontSize: 14,
       color: c.text,
       fontVariant: ['tabular-nums'],
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
     },
     devButtons: {
       flexDirection: 'row',

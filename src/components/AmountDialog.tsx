@@ -1,14 +1,26 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type KeyboardTypeOptions,
+} from 'react-native';
 
 import { parseAmount } from '@/domain/input';
+import type { Measure } from '@/domain/measure';
 import { formatError } from '@/i18n/format';
 import { useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
 
 type Props = {
   title: string;
+  /** Time amounts are typed as minutes or m:ss and submitted in seconds. */
+  measure: Measure;
   /** Pre-filled text when editing an entry. */
   initialText?: string;
   submitLabel: string;
@@ -17,13 +29,28 @@ type Props = {
   onClose: () => void;
 };
 
+/** Android's numeric keypad has no ":", so time entry uses the full keyboard there. */
+export function numberKeyboard(measure: Measure): KeyboardTypeOptions {
+  if (Platform.OS === 'ios') return 'numbers-and-punctuation';
+  return measure === 'duration' ? 'default' : 'numeric';
+}
+
 /** Mount it only while open, so each opening starts from `initialText`. */
-export function AmountDialog({ title, initialText = '', submitLabel, color, onSubmit, onClose }: Props) {
+export function AmountDialog({
+  title,
+  measure,
+  initialText = '',
+  submitLabel,
+  color,
+  onSubmit,
+  onClose,
+}: Props) {
   const { t } = useTranslation();
   const styles = useThemedStyles(makeStyles);
   const [text, setText] = useState(initialText);
   const [touched, setTouched] = useState(false);
-  const parsed = parseAmount(text);
+  const parsed = parseAmount(text, measure);
+  const isTime = measure === 'duration';
 
   function submit() {
     setTouched(true);
@@ -43,7 +70,7 @@ export function AmountDialog({ title, initialText = '', submitLabel, color, onSu
       <View style={styles.dialog} pointerEvents="box-none">
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.hint}>{t('amount.hint')}</Text>
+          <Text style={styles.hint}>{isTime ? t('amount.hintTime') : t('amount.hint')}</Text>
           <View style={styles.inputRow}>
             <Pressable
               onPress={toggleSign}
@@ -59,9 +86,11 @@ export function AmountDialog({ title, initialText = '', submitLabel, color, onSu
               onSubmitEditing={submit}
               autoFocus
               selectTextOnFocus
-              placeholder={t('amount.placeholder')}
+              placeholder={isTime ? t('amount.placeholderTime') : t('amount.placeholder')}
               placeholderTextColor={styles.placeholder.color}
-              keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+              keyboardType={numberKeyboard(measure)}
+              autoCapitalize="none"
+              autoCorrect={false}
               returnKeyType="done"
               style={styles.input}
               accessibilityLabel={t('amount.label')}

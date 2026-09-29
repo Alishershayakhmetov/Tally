@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { openDatabase } from '@/db/client';
 import { getSettings, useSettings } from '@/db/settings';
 import i18n, { resolveLanguage } from '@/i18n';
 import { useColors } from '@/lib/theme';
+import { startReminders } from '@/notifications/scheduler';
 import { lightColors, spacing } from '@/theme';
 
 type DbState = { status: 'opening' } | { status: 'ready' } | { status: 'failed'; message: string };
@@ -52,6 +53,15 @@ function AppShell() {
   useEffect(() => {
     void i18n.changeLanguage(resolveLanguage(language));
   }, [language]);
+
+  // Tapping a reminder opens its task; deferred so the navigator is mounted on a cold start.
+  useEffect(
+    () =>
+      startReminders((taskId) =>
+        setTimeout(() => router.push({ pathname: '/task/[id]', params: { id: taskId } }), 0),
+      ),
+    [],
+  );
 
   const navigationTheme = useMemo(() => {
     const base = colors.scheme === 'dark' ? DarkTheme : DefaultTheme;

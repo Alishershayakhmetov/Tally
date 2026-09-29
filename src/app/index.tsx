@@ -6,7 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TaskCard } from '@/components/TaskCard';
 import { useLive } from '@/db/live';
+import { getTask } from '@/db/repos/tasks';
+import { getActiveTimer } from '@/db/repos/timers';
 import { useSettings } from '@/db/settings';
+import { formatDuration } from '@/domain/measure';
+import { elapsedMs } from '@/domain/timer';
+import { useTicker } from '@/features/counter/Stopwatch';
 import { listTaskViews, type TaskView } from '@/features/tasks/taskViews';
 import { useNow } from '@/lib/clock';
 import { useThemedStyles } from '@/lib/theme';
@@ -38,6 +43,7 @@ export default function HomeScreen() {
         }}
       />
       <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 112 }]}>
+        <TimerBanner />
         {views.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🎯</Text>
@@ -64,6 +70,29 @@ export default function HomeScreen() {
         <Text style={styles.fabText}>＋ {t('home.newTask')}</Text>
       </Pressable>
     </View>
+  );
+}
+
+/** A running stopwatch stays visible from Home so it's never forgotten. */
+function TimerBanner() {
+  const { t } = useTranslation();
+  const styles = useThemedStyles(makeStyles);
+  const timer = useLive(getActiveTimer);
+  const task = useLive(() => (timer ? getTask(timer.taskId) : undefined));
+  const running = timer?.runningSince != null;
+  const nowMs = useTicker(running);
+  if (!timer || !task) return null;
+  const time = formatDuration(Math.floor(elapsedMs(timer, nowMs) / 1000));
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
+      style={[styles.timerBanner, { borderColor: task.color }]}
+      accessibilityRole="button"
+    >
+      <Text style={styles.timerText}>
+        {running ? '⏱' : '⏸'} {t('home.timerBanner', { name: task.name, time })}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -104,6 +133,19 @@ function makeStyles(c: Colors) {
     screen: {
       flex: 1,
       backgroundColor: c.background,
+    },
+    timerBanner: {
+      backgroundColor: c.surface,
+      borderRadius: radius.lg,
+      borderWidth: 2,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    timerText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.text,
+      fontVariant: ['tabular-nums'],
     },
     headerAction: {
       color: c.primary,

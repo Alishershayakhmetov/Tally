@@ -12,6 +12,7 @@ const INITIAL: TaskFormValues = {
   name: '',
   emoji: TASK_EMOJIS[0],
   color: TASK_COLORS[4],
+  measure: 'count',
   unitLabel: '',
   target: '',
   increments: DEFAULT_INCREMENTS.join(', '),
@@ -19,6 +20,7 @@ const INITIAL: TaskFormValues = {
   weekdayMask: ALL_WEEKDAYS_MASK,
   endDate: null,
   dayStartMin: null,
+  reminderTime: null,
 };
 
 export default function NewTaskScreen() {

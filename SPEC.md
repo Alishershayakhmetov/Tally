@@ -1,6 +1,6 @@
 # Task Counter App: Specification
 
-> Status: **Phases 0–1 built** (browser-verified, not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
+> Status: **Phases 0–2 built** (browser-verified; not yet run on a phone, and no APK built yet) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
 > Working title: *Task Counter* (final name TBD)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
@@ -310,6 +310,13 @@ Each phase ends with verification **on the real Android phone**, not just "it co
 - Reminders: per-task time, reminder planner with skip-if-done, re-plan triggers, permission flow
 - EAS build of an APK
 - **Done when:** the timer survives backgrounding and a force-close with the correct elapsed time. A reminder set for 2 minutes from now fires, and doesn't fire once the quota is met. The APK installs and runs without Expo Go.
+
+**Decisions made while building Phase 2** (not specified above):
+- Time goals: a plain number means **minutes** ("25"); colon forms are `m:ss` and `h:mm:ss`. Buttons are minutes. A task's measure (count or time) is locked after creation, because existing entries would change meaning.
+- The stopwatch logs whole seconds; less than a second logs nothing. Archiving or deleting a task discards its running stopwatch. Home shows a banner while one runs.
+- Reminders re-plan the whole schedule (cancel all, plan the next 14 days, at most 400) after any data change (debounced) and when the app returns to the foreground. That's simpler than tracking individual notifications, and it's always consistent. They're planned on the real clock, not the dev clock offset.
+- The reminder time is picked in 15-minute steps. Notification permission is requested when a reminder is first switched on, never at launch.
+- Android package: `com.alishershayakhmetov.taskcounter`. The EAS `preview` profile builds an APK; `production` builds an app bundle.
 
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |

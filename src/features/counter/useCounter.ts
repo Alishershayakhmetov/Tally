@@ -57,6 +57,13 @@ export function useCounter(task: TaskWithTotal, windowTotal: number) {
     afterChange(amount);
   }
 
+  /** An entry written elsewhere (the stopwatch) gets the same Undo bar and feedback. */
+  function recordLogged(entryId: string, amount: number) {
+    burst.current = null;
+    setLastChange({ entryId, amount });
+    afterChange(amount);
+  }
+
   function deleteEntry(entryId: string) {
     softDeleteEntry(entryId);
     if (burst.current?.entryId === entryId) burst.current = null;
@@ -71,5 +78,5 @@ export function useCounter(task: TaskWithTotal, windowTotal: number) {
     setLastChange(null);
   }
 
-  return { logButton, logManual, deleteEntry, undo, dismissUndo, lastChange };
+  return { logButton, logManual, recordLogged, deleteEntry, undo, dismissUndo, lastChange };
 }

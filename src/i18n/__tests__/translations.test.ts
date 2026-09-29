@@ -52,6 +52,9 @@ describe('translations', () => {
   it('has a message for every input error code', () => {
     const codes = [
       'amountNotInteger',
+      'durationInvalid',
+      'durationTargetInvalid',
+      'reminderInvalid',
       'amountZero',
       'amountTooLarge',
       'targetInvalid',

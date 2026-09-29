@@ -20,10 +20,11 @@
     "newTask": "Новая задача",
     "finished": "Завершённые",
     "archived": "Архив",
-    "openSettings": "Настройки"
+    "openSettings": "Настройки",
+    "timerBanner": "Секундомер · {{name}} · {{time}}"
   },
   "goal": {
-    "left": "ещё {{count}}",
+    "left": "ещё {{amount}}",
     "done": "готово",
     "today": "сегодня",
     "thisWeek": "на этой неделе",
@@ -50,7 +51,7 @@
     "monthsMet_few": "Выполнено {{met}} из {{count}} месяцев",
     "monthsMet_many": "Выполнено {{met}} из {{count}} месяцев",
     "monthsMet_other": "Выполнено {{met}} из {{count}} месяца",
-    "allTime": "Всего: {{count}}",
+    "allTime": "Всего: {{amount}}",
     "allTimeLabel": "За всё время",
     "archivedLabel": "В архиве"
   },
@@ -70,7 +71,18 @@
     "total": "Итого {{count}}",
     "deleteEntryTitle": "Удалить {{amount}}?",
     "deleteEntryBody": "Записано: {{day}}, {{time}}.",
-    "missing": "Этой задачи больше нет."
+    "missing": "Этой задачи больше нет.",
+    "min": "мин",
+    "start": "Запустить секундомер",
+    "pause": "Пауза",
+    "resume": "Продолжить",
+    "stop": "Остановить и записать",
+    "discard": "Сбросить",
+    "discardTitle": "Сбросить секундомер?",
+    "discardBody": "Время не будет записано.",
+    "otherTimer": "Секундомер уже идёт для «{{name}}».",
+    "timerTag": "секундомер",
+    "timerLabel": "Секундомер"
   },
   "amount": {
     "title": "Ввести число",
@@ -79,7 +91,9 @@
     "placeholder": "например, 37",
     "toggleSign": "Сменить знак",
     "label": "Число",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "hintTime": "Минуты (например, 25) или м:сс. Отрицательное значение исправит ошибку.",
+    "placeholderTime": "например, 25 или 1:30"
   },
   "form": {
     "name": "Название",
@@ -123,7 +137,23 @@
     "deleteTitle": "Удалить «{{name}}»?",
     "deleteBody": "Задача и её история будут удалены с этого устройства.",
     "earlier": "Раньше",
-    "later": "Позже"
+    "later": "Позже",
+    "measure": "Что считаем",
+    "measureCount": "Количество",
+    "measureTime": "Время",
+    "targetTimeHint": "Минуты (например, 60) или ч:мм:сс.",
+    "targetPlaceholderTime": "60",
+    "buttonsHintTime": "До 6 целых чисел минут через запятую. Отрицательные вычитают.",
+    "reminder": "Напоминание",
+    "reminderOff": "Выкл.",
+    "reminderOn": "Вкл.",
+    "reminderHint": "Не приходит, если норма дня или периода уже выполнена.",
+    "reminderWeb": "Напоминания работают только в приложении на телефоне.",
+    "reminderDenied": "Уведомления для приложения выключены в настройках системы.",
+    "hourEarlier": "На час раньше",
+    "hourLater": "На час позже",
+    "minuteEarlier": "Минуты раньше",
+    "minuteLater": "Минуты позже"
   },
   "errors": {
     "amountNotInteger": "Введите целое число, например 37 или -5",
@@ -141,7 +171,10 @@
     "unitTooLong": "Не больше {{max}} символов",
     "weekdaysEmpty": "Выберите хотя бы один день",
     "endBeforeStart": "Дата окончания не может быть раньше начала ({{date}})",
-    "dayStartInvalid": "Выберите время от 00:00 до 12:00"
+    "dayStartInvalid": "Выберите время от 00:00 до 12:00",
+    "durationInvalid": "Введите минуты или м:сс / ч:мм:сс",
+    "durationTargetInvalid": "Цель — время больше 0, например 60 или 1:00:00",
+    "reminderInvalid": "Выберите время"
   },
   "history": {
     "empty": "Пока ничего нет.",
@@ -164,7 +197,14 @@
     "clockOffset": "Сдвиг: {{hours}} ч",
     "plusHour": "+1 ч",
     "plusDay": "+1 день",
-    "resetClock": "Сбросить"
+    "resetClock": "Сбросить",
+    "notifications": "Уведомления",
+    "notificationsGranted": "Разрешены",
+    "notificationsDenied": "Запрещены в настройках системы",
+    "notificationsUndetermined": "Ещё не запрошены",
+    "allow": "Разрешить",
+    "notificationsWeb": "Недоступны в браузере",
+    "reminderNote": "Напоминания планируются на две недели вперёд и обновляются при каждом открытии приложения."
   },
   "date": {
     "today": "Сегодня",
@@ -204,5 +244,12 @@
     "weekdaysLong": ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
     "previousMonth": "Предыдущий месяц",
     "nextMonth": "Следующий месяц"
+  },
+  "reminder": {
+    "channel": "Напоминания",
+    "bodyDaily": "Сегодня ещё {{remaining}}",
+    "bodyWeekly": "На этой неделе ещё {{remaining}}",
+    "bodyMonthly": "В этом месяце ещё {{remaining}}",
+    "bodyTotal": "До цели ещё {{remaining}}"
   }
 }

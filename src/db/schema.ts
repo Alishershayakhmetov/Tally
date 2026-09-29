@@ -55,6 +55,17 @@ export const entries = sqliteTable(
   ],
 );
 
+/** At most one row: the running or paused stopwatch (SPEC §4.1). Local state, never synced. */
+export const activeTimer = sqliteTable('active_timer', {
+  taskId: text('task_id')
+    .primaryKey()
+    .references(() => tasks.id),
+  firstStartedAt: integer('first_started_at').notNull(),
+  utcOffsetMin: integer('utc_offset_min').notNull(),
+  runningSince: integer('running_since'),
+  accumulatedMs: integer('accumulated_ms').notNull(),
+});
+
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

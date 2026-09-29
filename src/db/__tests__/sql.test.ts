@@ -48,7 +48,7 @@ describe('migrations', () => {
       )
       .all()
       .map((r) => (r as { name: string }).name);
-    expect(tables).toEqual(['entries', 'settings', 'tasks']);
+    expect(tables).toEqual(['active_timer', 'entries', 'settings', 'tasks']);
   });
 });
 

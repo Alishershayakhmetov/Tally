@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phase 1 (goals, history, settings, EN/RU, dark mode)
+## Status: v1 feature set (Phases 0–2)
 
 **Counting (Phase 0)**
 
@@ -27,7 +27,25 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 - **Theme**: follows the phone, or light / dark. Every text colour is checked for WCAG AA contrast in both themes.
 - In development builds, Settings has a **clock offset** (+1 h / +1 day) for testing rollover without waiting for it.
 
-Not yet built (Phase 2, see SPEC §10): time goals with a stopwatch, reminders, installable APK.
+**Time and reminders (Phase 2)**
+
+- **Time goals** ("plank 10 minutes a day"): amounts show as `m:ss` / `h:mm:ss`, buttons add minutes, and typed amounts accept `25` (minutes), `1:30` or `1:05:00`.
+- **Stopwatch** with pause, resume, stop-and-log and discard. It's stored as timestamps, so it survives the app being backgrounded or killed, and it logs to the day it started. The screen stays on while it runs on the counter screen, and Home shows a banner while one is running. One stopwatch at a time.
+- **Reminders** at a per-task time, **skipped when that day's or period's goal is already met** (a total goal: skipped on days you already logged). After every change the app cancels its reminders and plans the next two weeks again, so there's nothing to keep in sync. Tapping a reminder opens its task. Permission is asked for the first time you turn a reminder on, and Settings shows its status.
+
+## Build an installable APK
+
+The `preview` profile in `eas.json` builds a standalone APK in Expo's cloud (free tier). It needs your own Expo account, and it uploads the project to Expo's build servers:
+
+```bash
+npx eas-cli@latest login
+```
+
+```bash
+npx eas-cli@latest build -p android --profile preview
+```
+
+The first build offers to create the EAS project and to generate an Android signing key; accept both. When it finishes, it prints a link and a QR code for downloading the APK to the phone. The Android package is `com.alishershayakhmetov.taskcounter` (in `app.json`); change it before any store release if you want a different one.
 
 ## Run it on your Android phone
 
@@ -71,6 +89,7 @@ src/
   features/     screen logic: useCounter, task view models, goal text, the task form
   i18n/         en.json, ru.json, i18next setup, date and error formatting
   lib/          clock (with dev offset), theme hooks, contrast, week start, haptics
+  notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts
   components/   shared UI: cards, dialogs, calendar, segmented control, steppers
 drizzle/        generated SQL migrations, bundled into the app
 ```
@@ -80,9 +99,12 @@ drizzle/        generated SQL migrations, bundled into the app
 - **Periods are pure date arithmetic** on `YYYY-MM-DD` strings (weeks, months, weekday masks, leap years), so daylight-saving changes can't shift a day.
 - **Soft deletes and client-generated UUIDs** throughout, so the local data is ready for sync later.
 - The database is opened asynchronously once at startup (migrations run then). After that, queries are synchronous, and screens re-read through `useLive()` whenever a repository writes.
+- **Reminders are planned, not polled.** A local notification can't run code when it fires, so "skip if the goal is met" is decided in advance by a pure planner (`domain/reminders.ts`, tested across cutoffs, weekday masks, weeks, months and a DST change). Progress can only change inside the app, and every change re-plans.
 
 ## Known limitations
 
 - **Web is not supported.** `expo-sqlite` 57.0.3's web build (alpha) truncates any synchronous result longer than 255 bytes: `web/WorkerChannel.ts` writes the result length with `Uint8Array.set(new Uint32Array([length]))`, which keeps only `length % 256`. Android and iOS use the native module and aren't affected. The Metro `wasm` setting and the cross-origin headers in `app.json` are kept for when this is fixed upstream. Web also needs cross-origin isolation, which `npx expo start` doesn't currently send.
-- Verified so far in a browser (with that bug patched locally) and by unit tests. **Not yet run on a real phone**, so Android-only behaviour (haptics, the system dark-mode switch, `Intl.PluralRules` on Hermes, which is polyfilled if missing) is unconfirmed.
+- Verified so far in a browser (with that bug patched locally) and by unit tests. **Not yet run on a real phone**, so Android-only behaviour is unconfirmed: notifications firing, haptics, keeping the screen on, the system dark-mode switch, and `Intl.PluralRules` on Hermes (polyfilled if missing).
+- **Reminders** don't exist on web. On Android they use inexact alarms, so they can arrive a few minutes late (exact alarms need a special permission that Android 14 denies by default). They're planned two weeks ahead, so if the app isn't opened for two weeks, they stop until it is.
+- The app icon, splash screen and notification icon are still the Expo template's; the app's name and branding are undecided (SPEC §12).
 - Header actions ("Settings", "Edit") are text buttons; no icon set is installed.

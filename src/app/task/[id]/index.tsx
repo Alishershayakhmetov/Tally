@@ -13,7 +13,10 @@ import { listRecentEntries } from '@/db/repos/entries';
 import { getTask, setArchived } from '@/db/repos/tasks';
 import type { Entry } from '@/db/schema';
 import { useSettings } from '@/db/settings';
-import { formatClock, formatCount, formatSigned } from '@/domain/format';
+import { formatClock, formatSigned } from '@/domain/format';
+import { buttonAmount, formatAmount, formatSignedAmount } from '@/domain/measure';
+import { SourceTag } from '@/features/counter/SourceTag';
+import { Stopwatch } from '@/features/counter/Stopwatch';
 import { useCounter } from '@/features/counter/useCounter';
 import {
   deadlineText,
@@ -61,13 +64,16 @@ function Counter({ view }: { view: TaskView }) {
   const { task, goal, lifecycle, today } = view;
   const { progress } = goal;
   const recent = useLive(() => listRecentEntries(task.id, 10));
-  const { logButton, logManual, deleteEntry, undo, dismissUndo, lastChange } = useCounter(
+  const { logButton, logManual, recordLogged, deleteEntry, undo, dismissUndo, lastChange } = useCounter(
     task,
     progress.total,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const canLog = lifecycle === 'active';
+  const isTime = task.measure === 'duration';
+  const amount = (n: number) => formatAmount(task.measure, n);
+  const signed = (n: number) => formatSignedAmount(task.measure, n);
   const columns = task.increments.length <= 4 ? 2 : 3;
   const unit = task.unitLabel ? ` ${task.unitLabel}` : '';
   const accentText = readableOn(task.color, colors.surface, colors.text);
@@ -88,7 +94,7 @@ function Counter({ view }: { view: TaskView }) {
     : {
         label: windowLabel(t, task.recurrence),
         total: progress.total,
-        subline: `${t('counter.of', { target: task.target })}${unitSuffix}`,
+        subline: `${t('counter.of', { target: amount(task.target) })}${unitSuffix}`,
         fraction: progress.fraction,
         status: !canLog
           ? endedStatusText(t, view)
@@ -100,7 +106,7 @@ function Counter({ view }: { view: TaskView }) {
 
   async function confirmDeleteEntry(entry: Entry) {
     const ok = await confirmDestructive(
-      t('counter.deleteEntryTitle', { amount: `${formatSigned(entry.amount)}${unit}` }),
+      t('counter.deleteEntryTitle', { amount: `${signed(entry.amount)}${unit}` }),
       t('counter.deleteEntryBody', {
         day: formatDay(t, entry.localDate, today).toLowerCase(),
         time: formatClock(entry.occurredAt, entry.utcOffsetMin),
@@ -148,7 +154,7 @@ function Counter({ view }: { view: TaskView }) {
             style={[styles.total, hero.total < 0 && { color: colors.danger }]}
             accessibilityLabel={t('counter.total', { count: hero.total })}
           >
-            {formatCount(hero.total)}
+            {amount(hero.total)}
           </Text>
           {hero.subline ? <Text style={styles.muted}>{hero.subline}</Text> : null}
           <View style={styles.barWrap}>
@@ -160,15 +166,17 @@ function Counter({ view }: { view: TaskView }) {
           </Text>
           {deadline && canLog ? <Text style={styles.muted}>{deadline}</Text> : null}
           {task.recurrence !== 'none' && canLog ? (
-            <Text style={styles.allTime}>{t('goal.allTime', { count: formatCount(task.total) })}</Text>
+            <Text style={styles.allTime}>{t('goal.allTime', { amount: amount(task.total) })}</Text>
           ) : null}
         </View>
+
+        {isTime ? <Stopwatch task={task} disabled={!canLog} onLogged={recordLogged} /> : null}
 
         <View style={[styles.pad, !canLog && styles.disabled]} pointerEvents={canLog ? 'auto' : 'none'}>
           {task.increments.map((delta) => (
             <Pressable
               key={delta}
-              onPress={() => logButton(delta)}
+              onPress={() => logButton(buttonAmount(task.measure, delta))}
               disabled={!canLog}
               style={({ pressed }) => [
                 styles.padButton,
@@ -179,15 +187,20 @@ function Counter({ view }: { view: TaskView }) {
                 pressed && styles.pressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel={
+              accessibilityLabel={`${
                 delta > 0
                   ? t('counter.add', { count: delta })
                   : t('counter.subtract', { count: Math.abs(delta) })
-              }
+              }${isTime ? ` ${t('counter.min')}` : ''}`}
             >
               <Text style={[styles.padText, { color: delta > 0 ? '#FFFFFF' : accentText }]}>
                 {formatSigned(delta)}
               </Text>
+              {isTime ? (
+                <Text style={[styles.padUnit, { color: delta > 0 ? '#FFFFFF' : accentText }]}>
+                  {t('counter.min')}
+                </Text>
+              ) : null}
             </Pressable>
           ))}
         </View>
@@ -216,15 +229,13 @@ function Counter({ view }: { view: TaskView }) {
                   accessibilityHint={t('counter.longPressHint')}
                 >
                   <Text style={[styles.entryAmount, entry.amount < 0 && { color: colors.danger }]}>
-                    {formatSigned(entry.amount)}
+                    {signed(entry.amount)}
                   </Text>
                   <Text style={styles.entryWhen}>
                     {formatDay(t, entry.localDate, today)} ·{' '}
                     {formatClock(entry.occurredAt, entry.utcOffsetMin)}
                   </Text>
-                  {entry.source === 'manual' ? (
-                    <Text style={styles.entryTag}>{t('counter.typed')}</Text>
-                  ) : null}
+                  <SourceTag source={entry.source} />
                 </Pressable>
               ))}
               <Text style={styles.hint}>{t('counter.longPressHint')}</Text>
@@ -244,7 +255,7 @@ function Counter({ view }: { view: TaskView }) {
 
       {lastChange ? (
         <UndoBar
-          message={t('counter.logged', { amount: `${formatSigned(lastChange.amount)}${unit}` })}
+          message={t('counter.logged', { amount: `${signed(lastChange.amount)}${unit}` })}
           resetKey={`${lastChange.entryId}:${lastChange.amount}`}
           bottomInset={insets.bottom}
           onUndo={undo}
@@ -255,6 +266,7 @@ function Counter({ view }: { view: TaskView }) {
       {dialogOpen ? (
         <AmountDialog
           title={t('amount.title')}
+          measure={task.measure}
           submitLabel={t('common.add')}
           color={task.color}
           onSubmit={logManual}
@@ -365,6 +377,11 @@ function makeStyles(c: Colors) {
       fontWeight: '800',
       fontVariant: ['tabular-nums'],
     },
+    padUnit: {
+      fontSize: 12,
+      fontWeight: '700',
+      marginTop: -2,
+    },
     pressed: {
       opacity: 0.75,
     },
@@ -416,14 +433,6 @@ function makeStyles(c: Colors) {
       fontSize: 14,
       color: c.textMuted,
       fontVariant: ['tabular-nums'],
-    },
-    entryTag: {
-      fontSize: 12,
-      color: c.textMuted,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: radius.sm,
-      paddingHorizontal: spacing.xs,
     },
     hint: {
       marginTop: spacing.xs,

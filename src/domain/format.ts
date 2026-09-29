@@ -1,21 +1,23 @@
 import { addDays } from './days';
+import { formatAmount, formatCount, type Measure } from './measure';
 
-const MINUS = '−';
-
-export function formatCount(n: number): string {
-  return n < 0 ? `${MINUS}${Math.abs(n)}` : String(n);
-}
+export { formatCount };
 
 export function formatSigned(n: number): string {
   return n > 0 ? `+${n}` : formatCount(n);
 }
 
 /**
- * "640 / 1000 · push-ups". The unit is user-typed text that can't be pluralised
- * (e.g. Russian "отжимания"), so it sits after a separator (SPEC §7).
+ * "640 / 1000 · push-ups" or "25:00 / 1:00:00". The unit is user-typed text that
+ * can't be pluralised (e.g. Russian "отжимания"), so it sits after a separator (SPEC §7).
  */
-export function formatProgressLine(total: number, target: number, unitLabel: string | null): string {
-  return `${formatCount(total)} / ${target}${unitLabel ? ` · ${unitLabel}` : ''}`;
+export function formatProgressLine(
+  total: number,
+  target: number,
+  unitLabel: string | null,
+  measure: Measure = 'count',
+): string {
+  return `${formatAmount(measure, total)} / ${formatAmount(measure, target)}${unitLabel ? ` · ${unitLabel}` : ''}`;
 }
 
 export function formatClock(occurredAtMs: number, utcOffsetMin: number): string {

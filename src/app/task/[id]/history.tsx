@@ -9,8 +9,10 @@ import { useLive } from '@/db/live';
 import { listEntries, softDeleteEntry, updateEntryAmount } from '@/db/repos/entries';
 import { getTask, todayFor } from '@/db/repos/tasks';
 import type { Entry } from '@/db/schema';
-import { formatClock, formatSigned } from '@/domain/format';
+import { formatClock } from '@/domain/format';
+import { formatAmount, formatSignedAmount } from '@/domain/measure';
 import { isQuotaDay } from '@/domain/periods';
+import { SourceTag } from '@/features/counter/SourceTag';
 import { formatDay } from '@/i18n/format';
 import { useNow } from '@/lib/clock';
 import { confirmDestructive } from '@/lib/confirm';
@@ -48,10 +50,11 @@ export default function HistoryScreen() {
 
   const today = todayFor(task.dayStartMin, nowMs);
   const unit = task.unitLabel ? ` ${task.unitLabel}` : '';
+  const signed = (n: number) => formatSignedAmount(task.measure, n);
 
   async function confirmDelete(entry: Entry) {
     const ok = await confirmDestructive(
-      t('counter.deleteEntryTitle', { amount: `${formatSigned(entry.amount)}${unit}` }),
+      t('counter.deleteEntryTitle', { amount: `${signed(entry.amount)}${unit}` }),
       t('counter.deleteEntryBody', {
         day: formatDay(t, entry.localDate, today).toLowerCase(),
         time: formatClock(entry.occurredAt, entry.utcOffsetMin),
@@ -80,10 +83,10 @@ export default function HistoryScreen() {
               <Text style={styles.dayLabel}>{formatDay(t, section.date, today)}</Text>
               <Text
                 style={[styles.dayTotal, met && { color: colors.positive }]}
-                accessibilityLabel={met ? `${formatSigned(section.total)}, ${t('history.met')}` : undefined}
+                accessibilityLabel={met ? `${signed(section.total)}, ${t('history.met')}` : undefined}
               >
                 {met ? '✓ ' : ''}
-                {formatSigned(section.total)}
+                {signed(section.total)}
               </Text>
             </View>
           );
@@ -97,17 +100,18 @@ export default function HistoryScreen() {
             accessibilityHint={t('history.hint')}
           >
             <Text style={[styles.amount, item.amount < 0 && { color: colors.danger }]}>
-              {formatSigned(item.amount)}
+              {signed(item.amount)}
             </Text>
             <Text style={styles.time}>{formatClock(item.occurredAt, item.utcOffsetMin)}</Text>
-            {item.source === 'manual' ? <Text style={styles.tag}>{t('counter.typed')}</Text> : null}
+            <SourceTag source={item.source} />
           </Pressable>
         )}
       />
       {editing ? (
         <AmountDialog
           title={t('amount.editTitle')}
-          initialText={String(editing.amount)}
+          measure={task.measure}
+          initialText={formatAmount(task.measure, editing.amount)}
           submitLabel={t('common.save')}
           color={task.color}
           onSubmit={(amount) => updateEntryAmount(editing.id, amount)}

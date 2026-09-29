@@ -13,7 +13,7 @@ export function notifyDataChanged(): void {
   listeners.forEach((listener) => listener());
 }
 
-function subscribe(listener: () => void): () => void {
+export function subscribeDataChanges(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -24,6 +24,6 @@ function getVersion(): number {
 
 /** `read` receives the data version so memoization is keyed on it explicitly. */
 export function useLive<T>(read: (dataVersion: number) => T): T {
-  const dataVersion = useSyncExternalStore(subscribe, getVersion, getVersion);
+  const dataVersion = useSyncExternalStore(subscribeDataChanges, getVersion, getVersion);
   return useMemo(() => read(dataVersion), [read, dataVersion]);
 }

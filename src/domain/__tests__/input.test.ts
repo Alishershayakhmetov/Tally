@@ -31,6 +31,13 @@ describe('parseAmount', () => {
     expect(parseAmount('-12')).toEqual({ ok: true, value: -12 });
   });
 
+  it('reads time amounts as minutes or m:ss, in seconds', () => {
+    expect(parseAmount('25', 'duration')).toEqual({ ok: true, value: 1500 });
+    expect(parseAmount('-1:30', 'duration')).toEqual({ ok: true, value: -90 });
+    expect(parseAmount('1.5', 'duration')).toEqual({ ok: false, error: { code: 'durationInvalid' } });
+    expect(parseAmount('0:00', 'duration')).toEqual({ ok: false, error: { code: 'amountZero' } });
+  });
+
   it.each(['0', 'abc', '3.5', '2000000000'])('rejects %p', (text) => {
     expect(parseAmount(text).ok).toBe(false);
   });
@@ -72,6 +79,7 @@ describe('validateTaskForm', () => {
     name: '  Push-ups ',
     emoji: '💪',
     color: '#E5484D',
+    measure: 'count',
     unitLabel: ' push-ups ',
     target: '1000',
     increments: '-1, 1, 5, 10',
@@ -79,6 +87,7 @@ describe('validateTaskForm', () => {
     weekdayMask: 127,
     endDate: null,
     dayStartMin: null,
+    reminderTime: null,
   };
 
   it('trims and converts a valid form', () => {
@@ -88,6 +97,7 @@ describe('validateTaskForm', () => {
         name: 'Push-ups',
         emoji: '💪',
         color: '#E5484D',
+        measure: 'count',
         unitLabel: 'push-ups',
         target: 1000,
         increments: [-1, 1, 5, 10],
@@ -95,8 +105,25 @@ describe('validateTaskForm', () => {
         weekdayMask: null,
         endDate: null,
         dayStartMin: null,
+        reminderTime: null,
       },
     });
+  });
+
+  it('reads a time goal target as minutes or h:mm:ss and drops the unit label', () => {
+    const minutes = validateTaskForm({ ...valid, measure: 'duration', target: '60' }, TODAY);
+    expect(minutes.ok && [minutes.value.target, minutes.value.unitLabel]).toEqual([3600, null]);
+    const hms = validateTaskForm({ ...valid, measure: 'duration', target: '1:30:00' }, TODAY);
+    expect(hms.ok && hms.value.target).toBe(5400);
+    const bad = validateTaskForm({ ...valid, measure: 'duration', target: '1:99' }, TODAY);
+    expect(!bad.ok && bad.errors.target).toEqual({ code: 'durationTargetInvalid' });
+  });
+
+  it('validates the reminder time', () => {
+    const ok = validateTaskForm({ ...valid, reminderTime: '19:30' }, TODAY);
+    expect(ok.ok && ok.value.reminderTime).toBe('19:30');
+    const bad = validateTaskForm({ ...valid, reminderTime: '25:00' }, TODAY);
+    expect(!bad.ok && bad.errors.reminderTime).toEqual({ code: 'reminderInvalid' });
   });
 
   it('stores an empty unit label as null', () => {

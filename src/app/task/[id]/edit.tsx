@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLive } from '@/db/live';
 import { getTask, setArchived, softDeleteTask, updateTask, type TaskWithTotal } from '@/db/repos/tasks';
 import type { TaskFormValues } from '@/domain/input';
+import { formatDuration } from '@/domain/measure';
 import { ALL_WEEKDAYS_MASK } from '@/domain/periods';
 import { TaskForm } from '@/features/tasks/TaskForm';
 import { confirmDestructive } from '@/lib/confirm';
@@ -16,13 +17,15 @@ function toFormValues(task: TaskWithTotal): TaskFormValues {
     name: task.name,
     emoji: task.emoji,
     color: task.color,
+    measure: task.measure,
     unitLabel: task.unitLabel ?? '',
-    target: String(task.target),
+    target: task.measure === 'duration' ? formatDuration(task.target) : String(task.target),
     increments: task.increments.join(', '),
     recurrence: task.recurrence,
     weekdayMask: task.weekdayMask ?? ALL_WEEKDAYS_MASK,
     endDate: task.endDate,
     dayStartMin: task.dayStartMin,
+    reminderTime: task.reminderTime,
   };
 }
 
@@ -49,6 +52,7 @@ export default function EditTaskScreen() {
     <TaskForm
       initial={toFormValues(task)}
       startDate={task.startDate}
+      measureLocked
       submitLabel={t('form.save')}
       onSubmit={(value) => {
         updateTask(task.id, value);

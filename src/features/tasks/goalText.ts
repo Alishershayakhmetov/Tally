@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 
+import { formatAmount } from '@/domain/measure';
 import type { Recurrence } from '@/domain/periods';
 import { formatDate } from '@/i18n/format';
 
@@ -24,7 +25,7 @@ export function statusText(t: TFunction, view: TaskView): string {
   if (restDay && !progress.done) return t('goal.restDay');
   return progress.done
     ? `${progress.percent}% · ${t('goal.done')}`
-    : `${progress.percent}% · ${t('goal.left', { count: progress.remaining })}`;
+    : `${progress.percent}% · ${t('goal.left', { amount: formatAmount(view.task.measure, progress.remaining) })}`;
 }
 
 /** "12 days left", "Last day", or null without an end date. */

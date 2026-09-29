@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { numberKeyboard } from '@/components/AmountDialog';
 import { CalendarDialog } from '@/components/CalendarDialog';
+import { ReminderTimePicker, shiftReminderTime } from '@/components/ReminderTimePicker';
 import { Segmented } from '@/components/Segmented';
 import { TaskBadge } from '@/components/TaskBadge';
 import { TimeStepper } from '@/components/TimeStepper';
@@ -18,13 +20,17 @@ import {
   type TaskFormValues,
   type ValidTaskForm,
 } from '@/domain/input';
+import type { Measure } from '@/domain/measure';
 import type { Recurrence } from '@/domain/periods';
 import { clampDayStart, formatMinutes } from '@/domain/settings';
 import { formatDate, formatError } from '@/i18n/format';
+import { remindersSupported, useNotificationPermission } from '@/notifications/scheduler';
 import { readableOn } from '@/lib/contrast';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { useWeekStart } from '@/lib/weekStart';
 import { radius, spacing, TASK_COLORS, TASK_EMOJIS, type Colors } from '@/theme';
+
+const DEFAULT_REMINDER_TIME = '19:00';
 
 type Props = {
   initial: TaskFormValues;
@@ -32,10 +38,19 @@ type Props = {
   startDate: string;
   submitLabel: string;
   onSubmit: (value: ValidTaskForm) => void;
+  /** Existing entries would change meaning if a task switched between count and time. */
+  measureLocked?: boolean;
   footer?: ReactNode;
 };
 
-export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: Props) {
+export function TaskForm({
+  initial,
+  startDate,
+  submitLabel,
+  onSubmit,
+  measureLocked = false,
+  footer,
+}: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const colors = useColors();
@@ -45,8 +60,21 @@ export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: 
   const [values, setValues] = useState(initial);
   const [errors, setErrors] = useState<TaskFormErrors>({});
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [permission, requestPermission] = useNotificationPermission();
   const incrementsPreview = parseIncrements(values.increments);
   const accentText = readableOn(values.color, colors.surface, colors.text);
+  const isTime = values.measure === 'duration';
+
+  function setReminder(on: boolean) {
+    set('reminderTime', on ? DEFAULT_REMINDER_TIME : null);
+    if (on) void requestPermission();
+  }
+
+  const reminderHint = !remindersSupported
+    ? t('form.reminderWeb')
+    : permission === 'denied'
+      ? t('form.reminderDenied')
+      : t('form.reminderHint');
 
   function set<K extends keyof TaskFormValues>(key: K, value: TaskFormValues[K]) {
     update(key, () => value);
@@ -99,6 +127,20 @@ export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: 
         />
       </Field>
 
+      <Field label={t('form.measure')}>
+        <View pointerEvents={measureLocked ? 'none' : 'auto'} style={measureLocked && styles.locked}>
+          <Segmented<Measure>
+            accessibilityLabel={t('form.measure')}
+            value={values.measure}
+            onChange={(measure) => set('measure', measure)}
+            options={[
+              { value: 'count', label: t('form.measureCount') },
+              { value: 'duration', label: t('form.measureTime') },
+            ]}
+          />
+        </View>
+      </Field>
+
       <Field label={t('form.goal')}>
         <Segmented<Recurrence>
           accessibilityLabel={t('form.goal')}
@@ -116,27 +158,33 @@ export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: 
       <Field
         label={t('form.target')}
         error={errors.target ?? errors.unitLabel}
-        hint={targetHint[values.recurrence]}
+        hint={
+          isTime
+            ? `${targetHint[values.recurrence]} ${t('form.targetTimeHint')}`
+            : targetHint[values.recurrence]
+        }
       >
         <View style={styles.targetRow}>
           <TextInput
             value={values.target}
             onChangeText={(text) => set('target', text)}
-            placeholder={t('form.targetPlaceholder')}
+            placeholder={isTime ? t('form.targetPlaceholderTime') : t('form.targetPlaceholder')}
             placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
+            keyboardType={isTime ? numberKeyboard('duration') : 'number-pad'}
             style={[styles.input, styles.targetInput]}
             accessibilityLabel={t('form.target')}
           />
-          <TextInput
-            value={values.unitLabel}
-            onChangeText={(text) => set('unitLabel', text)}
-            placeholder={t('form.unitPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            maxLength={30}
-            style={[styles.input, styles.unitInput]}
-            accessibilityLabel={t('form.unit')}
-          />
+          {isTime ? null : (
+            <TextInput
+              value={values.unitLabel}
+              onChangeText={(text) => set('unitLabel', text)}
+              placeholder={t('form.unitPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              maxLength={30}
+              style={[styles.input, styles.unitInput]}
+              accessibilityLabel={t('form.unit')}
+            />
+          )}
         </View>
       </Field>
 
@@ -202,6 +250,26 @@ export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: 
         ) : null}
       </Field>
 
+      <Field label={t('form.reminder')} error={errors.reminderTime} hint={reminderHint}>
+        <Segmented<'off' | 'on'>
+          accessibilityLabel={t('form.reminder')}
+          value={values.reminderTime === null ? 'off' : 'on'}
+          onChange={(mode) => setReminder(mode === 'on')}
+          options={[
+            { value: 'off', label: t('form.reminderOff') },
+            { value: 'on', label: t('form.reminderOn') },
+          ]}
+        />
+        {values.reminderTime !== null ? (
+          <ReminderTimePicker
+            value={values.reminderTime}
+            onShift={(delta) =>
+              update('reminderTime', (v) => shiftReminderTime(v.reminderTime ?? DEFAULT_REMINDER_TIME, delta))
+            }
+          />
+        ) : null}
+      </Field>
+
       <Field label={t('form.icon')}>
         <View style={styles.chips}>
           {TASK_EMOJIS.map((emoji) => (
@@ -238,7 +306,11 @@ export function TaskForm({ initial, startDate, submitLabel, onSubmit, footer }: 
         </View>
       </Field>
 
-      <Field label={t('form.buttons')} error={errors.increments} hint={t('form.buttonsHint')}>
+      <Field
+        label={t('form.buttons')}
+        error={errors.increments}
+        hint={isTime ? t('form.buttonsHintTime') : t('form.buttonsHint')}
+      >
         <TextInput
           value={values.increments}
           onChangeText={(text) => set('increments', text)}
@@ -425,6 +497,9 @@ function makeStyles(c: Colors) {
       width: 40,
       height: 40,
       borderRadius: radius.pill,
+    },
+    locked: {
+      opacity: 0.5,
     },
     swatchSelected: {
       borderWidth: 3,

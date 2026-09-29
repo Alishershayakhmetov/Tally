@@ -7,7 +7,7 @@ import { now } from '@/lib/clock';
 
 import { getDb } from '../client';
 import { notifyDataChanged } from '../live';
-import { entries, tasks, type Task } from '../schema';
+import { activeTimer, entries, tasks, type Task } from '../schema';
 import { getGlobalDayStartMin } from '../settings';
 import { REGROUP_TASK_SQL } from '../sql';
 
@@ -55,7 +55,6 @@ export function createTask(input: ValidTaskForm, at = now()): string {
     .values({
       id,
       ...input,
-      measure: 'count',
       startDate: todayFor(input.dayStartMin, at),
       sortOrder: lastOrder + 1,
       createdAt: at,
@@ -86,16 +85,22 @@ export function updateTask(id: string, input: ValidTaskForm, at = now()): void {
   notifyDataChanged();
 }
 
+/** Archiving or deleting a task also drops its stopwatch, which could no longer be stopped. */
 export function setArchived(id: string, archived: boolean, at = now()): void {
-  getDb()
-    .update(tasks)
-    .set({ archivedAt: archived ? at : null, updatedAt: at })
-    .where(eq(tasks.id, id))
-    .run();
+  getDb().transaction((tx) => {
+    tx.update(tasks)
+      .set({ archivedAt: archived ? at : null, updatedAt: at })
+      .where(eq(tasks.id, id))
+      .run();
+    if (archived) tx.delete(activeTimer).where(eq(activeTimer.taskId, id)).run();
+  });
   notifyDataChanged();
 }
 
 export function softDeleteTask(id: string, at = now()): void {
-  getDb().update(tasks).set({ deletedAt: at, updatedAt: at }).where(eq(tasks.id, id)).run();
+  getDb().transaction((tx) => {
+    tx.update(tasks).set({ deletedAt: at, updatedAt: at }).where(eq(tasks.id, id)).run();
+    tx.delete(activeTimer).where(eq(activeTimer.taskId, id)).run();
+  });
   notifyDataChanged();
 }

@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatCount, formatProgressLine } from '@/domain/format';
+import { formatProgressLine } from '@/domain/format';
+import { formatAmount } from '@/domain/measure';
 import { deadlineText, endedStatusText, statusText, windowLabel } from '@/features/tasks/goalText';
 import type { TaskView } from '@/features/tasks/taskViews';
 import { useThemedStyles } from '@/lib/theme';
@@ -21,8 +22,8 @@ export function TaskCard({ view }: { view: TaskView }) {
   // An ended repeating goal has no meaningful current period, so show its all-time total.
   const progressLine =
     !active && task.recurrence !== 'none'
-      ? `${t('goal.allTime', { count: formatCount(task.total) })}${task.unitLabel ? ` · ${task.unitLabel}` : ''}`
-      : formatProgressLine(progress.total, progress.target, task.unitLabel);
+      ? `${t('goal.allTime', { amount: formatAmount(task.measure, task.total) })}${task.unitLabel ? ` · ${task.unitLabel}` : ''}`
+      : formatProgressLine(progress.total, progress.target, task.unitLabel, task.measure);
   const subline = active
     ? [windowLabel(t, task.recurrence), deadlineText(t, view)].filter(Boolean).join(' · ')
     : lifecycle === 'finished'
@@ -62,7 +63,9 @@ export function TaskCard({ view }: { view: TaskView }) {
           ) : (
             <View style={styles.statusBox}>
               <Text style={styles.status}>{progress.percent}%</Text>
-              <Text style={styles.remaining}>{t('goal.left', { count: progress.remaining })}</Text>
+              <Text style={styles.remaining}>
+                {t('goal.left', { amount: formatAmount(task.measure, progress.remaining) })}
+              </Text>
             </View>
           )
         ) : null}
