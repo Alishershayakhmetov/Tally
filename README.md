@@ -45,6 +45,8 @@ npx eas-cli@latest login
 npx eas-cli@latest build -p android --profile preview
 ```
 
+`eas.json` pins the build server to Node 24.13.0 (npm 11), the same versions that write `package-lock.json` locally. With EAS's default (Node 22, npm 10), `npm ci` rejects the lockfile: npm 11 leaves out `@emnapi/core` and `@emnapi/runtime`, which are peer dependencies of an optional WebAssembly package, and npm 10 requires them. If you upgrade Node locally, update the pin to match.
+
 The first build offers to create the EAS project and to generate an Android signing key; accept both. When it finishes, it prints a link and a QR code for downloading the APK to the phone. The Android package is `com.alishershayakhmetov.taskcounter` (in `app.json`); change it before any store release if you want a different one.
 
 ## Run it on your Android phone
