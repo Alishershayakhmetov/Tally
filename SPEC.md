@@ -83,7 +83,7 @@ Every change to a counter is an **entry** with a signed amount. **The counter va
 Each task card shows:
 - Total tasks: `640 / 1000 push-ups · 64% · 360 left`, plus `12 days left` when there's a deadline
 - Recurring tasks: `Today 60 / 100 · 60% · 40 left` (or `This week` / `This month`). On weekdays outside the mask it shows `Rest day`.
-- A progress bar. Reaching the target triggers a completion state (checkmark, haptic feedback).
+- A progress bar. Reaching the target triggers a completion state (checkmark, and haptic feedback if Vibration is on in Settings).
 - Below zero, the number and "left" are shown as they are (`−5 / 100 · 105 left`). The bar is empty and the percentage is floored at `0%`.
 
 ### 3.4 Task lifecycle
@@ -126,7 +126,7 @@ Each task card shows:
    - Recent entries, and a link to the full history
 3. **Create / Edit task**: the fields from §3.1 (the day-start picker shows "Default (04:00)" until overridden), and a preview of the card
 4. **History** (per task): entries grouped by day, with delete (and edit amount)
-5. **Settings**: language (System / English / Русский), theme (System / Light / Dark), **week starts on** (Auto / Monday / Sunday), **new day starts at** (global default cutoff for all tasks, 00:00–12:00), notification permission status, about
+5. **Settings**: language (System / English / Русский), theme (System / Light / Dark), **vibration** (haptic feedback when logging; **off** by default), **week starts on** (Auto / Monday / Sunday), **new day starts at** (global default cutoff for all tasks, 00:00–12:00), notification permission status, about
 
 ### 4.1 Stopwatch rules
 - The timer state is **persisted** (`first_started_at`, `running_since` and accumulated time in the `active_timer` table), and elapsed time is computed from timestamps, not a JS interval. It survives backgrounding, screen lock and app kill.

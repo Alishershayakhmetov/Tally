@@ -10,6 +10,8 @@ export type Settings = {
   weekStart: WeekStartPref;
   /** Global default cutoff in minutes after midnight (SPEC §3.5). */
   dayStartMin: number;
+  /** Haptic feedback when logging progress. Off unless the user turns it on. */
+  vibration: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -17,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   weekStart: 'auto',
   dayStartMin: 0,
+  vibration: false,
 };
 
 export const DAY_START_STEP_MIN = 15;
@@ -51,6 +54,7 @@ export function parseSettings(rows: ReadonlyMap<string, string>): Settings {
           ? (Number(weekStart) as WeekStartPref)
           : DEFAULT_SETTINGS.weekStart,
     dayStartMin: isValidDayStart(dayStart) ? dayStart : DEFAULT_SETTINGS.dayStartMin,
+    vibration: rows.get('vibration') === 'true',
   };
 }
 

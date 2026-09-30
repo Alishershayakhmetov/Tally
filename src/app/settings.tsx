@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Segmented } from '@/components/Segmented';
@@ -11,8 +11,9 @@ import { formatClock } from '@/domain/format';
 import type { WeekStartPref } from '@/domain/periods';
 import { clampDayStart, type LanguagePref, type ThemePref } from '@/domain/settings';
 import { setClockOffsetMs, useClockOffsetMs, useNow } from '@/lib/clock';
+import { tapFeedback } from '@/lib/haptics';
 import { useNotificationPermission } from '@/notifications/scheduler';
-import { useThemedStyles } from '@/lib/theme';
+import { useColors, useThemedStyles } from '@/lib/theme';
 import { localeFirstWeekday } from '@/lib/weekStart';
 import { radius, spacing, type Colors } from '@/theme';
 
@@ -53,6 +54,17 @@ export default function SettingsScreen() {
           ]}
         />
       </Row>
+
+      <SwitchRow
+        label={t('settings.vibration')}
+        hint={t('settings.vibrationHint')}
+        value={settings.vibration}
+        onChange={(value) => {
+          updateSetting('vibration', value);
+          // A sample buzz confirms it works; turning it off stays silent.
+          tapFeedback();
+        }}
+      />
 
       <Row label={t('settings.weekStart')}>
         <Segmented<WeekStartPref>
@@ -144,6 +156,33 @@ function DevButton({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
+function SwitchRow(props: {
+  label: string;
+  hint?: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  const { label, hint, value, onChange } = props;
+  const styles = useThemedStyles(makeStyles);
+  const c = useColors();
+  return (
+    <View style={styles.row}>
+      <View style={styles.switchLine}>
+        <Text style={[styles.label, styles.grow]}>{label}</Text>
+        <Switch
+          value={value}
+          onValueChange={onChange}
+          trackColor={{ false: c.textMuted, true: c.primary }}
+          thumbColor="#FFFFFF"
+          ios_backgroundColor={c.textMuted}
+          accessibilityLabel={label}
+        />
+      </View>
+      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   const styles = useThemedStyles(makeStyles);
   return (
@@ -168,6 +207,14 @@ function makeStyles(c: Colors) {
       fontSize: 14,
       fontWeight: '600',
       color: c.text,
+    },
+    switchLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    grow: {
+      flex: 1,
     },
     hint: {
       fontSize: 13,

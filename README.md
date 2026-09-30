@@ -25,6 +25,7 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 - **Week starts on**: Auto (from the phone's locale), Monday or Sunday. Weekly quotas re-group immediately.
 - **Language**: follows the phone, or English / Русский, including correct Russian plurals ("Остался 21 день", "Выполнено 1 из 21 дня").
 - **Theme**: follows the phone, or light / dark. Every text colour is checked for WCAG AA contrast in both themes.
+- **Vibration**: off by default. When on, the phone vibrates briefly on every logged change, with a distinct pattern when a goal is reached; switching it on gives a sample buzz. It doesn't affect reminder notifications, which follow Android's settings for the app's notification channel.
 - In development builds, Settings has a **clock offset** (+1 h / +1 day) for testing rollover without waiting for it.
 
 **Time and reminders (Phase 2)**

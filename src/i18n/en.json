@@ -183,6 +183,8 @@
     "auto": "Auto ({{day}})",
     "dayStart": "New day starts at",
     "dayStartHint": "For tasks without their own time. Logs before it count for the previous day, and history is re-grouped when you change it.",
+    "vibration": "Vibration",
+    "vibrationHint": "Vibrate when you log progress and when a goal is reached.",
     "storage": "Your data is stored only on this device.",
     "developer": "Developer",
     "clock": "Simulated time: {{time}}",

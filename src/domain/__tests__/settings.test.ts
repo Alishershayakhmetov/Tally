@@ -11,8 +11,15 @@ describe('parseSettings', () => {
       ['theme', 'dark'],
       ['weekStart', '0'],
       ['dayStartMin', '240'],
+      ['vibration', 'true'],
     ]);
-    expect(parseSettings(rows)).toEqual({ language: 'ru', theme: 'dark', weekStart: 0, dayStartMin: 240 });
+    expect(parseSettings(rows)).toEqual({
+      language: 'ru',
+      theme: 'dark',
+      weekStart: 0,
+      dayStartMin: 240,
+      vibration: true,
+    });
   });
 
   it('ignores malformed values', () => {
@@ -21,8 +28,21 @@ describe('parseSettings', () => {
       ['theme', 'neon'],
       ['weekStart', '9'],
       ['dayStartMin', '1000'],
+      ['vibration', 'yes'],
     ]);
     expect(parseSettings(rows)).toEqual(DEFAULT_SETTINGS);
+  });
+});
+
+describe('vibration', () => {
+  it('is off by default, including for installs that never saved it', () => {
+    expect(DEFAULT_SETTINGS.vibration).toBe(false);
+    expect(parseSettings(new Map([['theme', 'dark']])).vibration).toBe(false);
+  });
+
+  it('round-trips through the string column', () => {
+    expect(parseSettings(new Map([['vibration', String(true)]])).vibration).toBe(true);
+    expect(parseSettings(new Map([['vibration', String(false)]])).vibration).toBe(false);
   });
 });
 
