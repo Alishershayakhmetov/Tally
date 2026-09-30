@@ -1,4 +1,4 @@
-# Task Counter
+# Tally
 
 A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, _"100 squats"_. Create a task, tap to log progress, and see how far you are from the target. All data lives in SQLite on the device.
 
@@ -94,6 +94,8 @@ src/
   notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts
   components/   shared UI: cards, dialogs, calendar, segmented control, steppers
 drizzle/        generated SQL migrations, bundled into the app
+assets/         icon.svg (the icon master) and the PNGs exported from it: launcher, adaptive
+                foreground and monochrome, notification, splash, favicon
 ```
 
 - **A count is never stored.** Each change is an entry with a signed amount, and the total is the sum of entries. Undo and history come for free, and future cloud sync can merge two devices without conflicts (SPEC §6.3).
@@ -108,5 +110,4 @@ drizzle/        generated SQL migrations, bundled into the app
 - **Web is not supported.** `expo-sqlite` 57.0.3's web build (alpha) truncates any synchronous result longer than 255 bytes: `web/WorkerChannel.ts` writes the result length with `Uint8Array.set(new Uint32Array([length]))`, which keeps only `length % 256`. Android and iOS use the native module and aren't affected. The Metro `wasm` setting and the cross-origin headers in `app.json` are kept for when this is fixed upstream. Web also needs cross-origin isolation, which `npx expo start` doesn't currently send.
 - Verified so far in a browser (with that bug patched locally) and by unit tests. **Not yet run on a real phone**, so Android-only behaviour is unconfirmed: notifications firing, haptics, keeping the screen on, the system dark-mode switch, and `Intl.PluralRules` on Hermes (polyfilled if missing).
 - **Reminders** don't exist on web. On Android they use inexact alarms, so they can arrive a few minutes late (exact alarms need a special permission that Android 14 denies by default). They're planned two weeks ahead, so if the app isn't opened for two weeks, they stop until it is.
-- The app icon, splash screen and notification icon are still the Expo template's; the app's name and branding are undecided (SPEC §12).
 - Header actions ("Settings", "Edit") are text buttons; no icon set is installed.

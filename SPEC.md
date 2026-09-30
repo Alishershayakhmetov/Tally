@@ -1,7 +1,7 @@
-# Task Counter App: Specification
+# Tally: Specification
 
 > Status: **Phases 0–2 built** (browser-verified; not yet run on a phone, and no APK built yet) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
-> Working title: *Task Counter* (final name TBD)
+> Name: *Tally* (working title was *Task Counter*)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
 
@@ -351,4 +351,4 @@ Settled in rev. 2–3: week start is a setting, counters can go negative, the cu
 6. A timer running past the day boundary counts toward the logical day it started.
 7. After a deadline passes, the task moves to Finished. Editing the deadline reopens it.
 8. For non-recurring tasks, the reminder is skipped on days you already logged something.
-9. Working title "Task Counter". The app name, icon and color palette are to be decided.
+9. The app is called **Tally** in every language. Its icon is white tally marks (four strokes crossed by a fifth) on the app's blue, `#2563EB`; the master is `assets/icon.svg`. Internal identifiers keep the old name: the slug `task-counter` (the EAS project is linked to it), the Android package `com.alishershayakhmetov.taskcounter` (the signing key is registered for it, and a new package would install as a separate app), the URL scheme `taskcounter`, and the database file `task-counter.db` (renaming it would orphan existing data).

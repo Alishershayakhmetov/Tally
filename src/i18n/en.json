@@ -8,7 +8,7 @@
     "undo": "UNDO"
   },
   "screens": {
-    "home": "Task Counter",
+    "home": "Tally",
     "newTask": "New task",
     "editTask": "Edit task",
     "history": "History",

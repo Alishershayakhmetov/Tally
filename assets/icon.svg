@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Tally app icon master. PNGs in assets/images are exported from the same geometry. -->
+  <rect width="1024" height="1024" fill="#2563EB"/>
+  <g stroke="#FFFFFF" stroke-width="66.0" stroke-linecap="round">
+    <line x1="332.0" y1="296.0" x2="332.0" y2="728.0"/>
+    <line x1="452.0" y1="296.0" x2="452.0" y2="728.0"/>
+    <line x1="572.0" y1="296.0" x2="572.0" y2="728.0"/>
+    <line x1="692.0" y1="296.0" x2="692.0" y2="728.0"/>
+    <line x1="236.0" y1="662.0" x2="788.0" y2="362.0"/>
+  </g>
+</svg>
