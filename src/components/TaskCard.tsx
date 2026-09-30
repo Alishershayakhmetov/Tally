@@ -4,7 +4,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatProgressLine } from '@/domain/format';
 import { formatAmount } from '@/domain/measure';
-import { deadlineText, endedStatusText, statusText, windowLabel } from '@/features/tasks/goalText';
+import {
+  deadlineText,
+  endedStatusText,
+  showsStreakBadge,
+  statusText,
+  streakLabel,
+  windowLabel,
+} from '@/features/tasks/goalText';
 import type { TaskView } from '@/features/tasks/taskViews';
 import { useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
@@ -24,8 +31,11 @@ export function TaskCard({ view }: { view: TaskView }) {
     !active && task.recurrence !== 'none'
       ? `${t('goal.allTime', { amount: formatAmount(task.measure, task.total) })}${task.unitLabel ? ` · ${task.unitLabel}` : ''}`
       : formatProgressLine(progress.total, progress.target, task.unitLabel, task.measure);
+  const badge = showsStreakBadge(view);
   const subline = active
-    ? [windowLabel(t, task.recurrence), deadlineText(t, view)].filter(Boolean).join(' · ')
+    ? [windowLabel(t, task.recurrence), deadlineText(t, view), badge ? `🔥 ${view.streak.current}` : null]
+        .filter(Boolean)
+        .join(' · ')
     : lifecycle === 'finished'
       ? endedStatusText(t, view)
       : [t('goal.archivedLabel'), endedStatusText(t, view)].join(' · ');
@@ -36,7 +46,16 @@ export function TaskCard({ view }: { view: TaskView }) {
       onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
       style={({ pressed }) => [styles.card, !active && styles.inactive, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={[task.name, progressLine, subline, active ? statusText(t, view) : null]
+      accessibilityLabel={[
+        task.name,
+        progressLine,
+        active
+          ? [windowLabel(t, task.recurrence), deadlineText(t, view), badge ? streakLabel(t, view) : null]
+              .filter(Boolean)
+              .join(', ')
+          : subline,
+        active ? statusText(t, view) : null,
+      ]
         .filter(Boolean)
         .join(', ')}
     >

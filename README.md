@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: v1 feature set (Phases 0–2)
+## Status: Phases 0–3
 
 **Counting (Phase 0)**
 
@@ -33,6 +33,12 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 - **Time goals** ("plank 10 minutes a day"): amounts show as `m:ss` / `h:mm:ss`, buttons add minutes, and typed amounts accept `25` (minutes), `1:30` or `1:05:00`.
 - **Stopwatch** with pause, resume, stop-and-log and discard. It's stored as timestamps, so it survives the app being backgrounded or killed, and it logs to the day it started. The screen stays on while it runs on the counter screen, and Home shows a banner while one is running. One stopwatch at a time.
 - **Reminders** at a per-task time, **skipped when that day's or period's goal is already met** (a total goal: skipped on days you already logged). After every change the app cancels its reminders and plans the next two weeks again, so there's nothing to keep in sync. Tapping a reminder opens its task. Permission is asked for the first time you turn a reminder on, and Settings shows its status.
+
+**Pace, streaks and backup (Phase 3)**
+
+- **Pace** for a total goal with a deadline, or a weekly/monthly quota: "Need 31/day · 37 ahead of pace". Ahead/behind compares your total with an even spread up to the start of today, so the morning never counts as "behind".
+- **Streaks**: consecutive met days, weeks or months (rest days don't break them), or consecutive days with anything logged for a total goal. A period still in progress extends a streak but never breaks it. The counter shows current and best; Home cards get a 🔥 badge from 2 in a row.
+- **Backup** in Settings. **Export** writes one JSON file (every task and entry, including deletions, plus settings) and opens the share sheet, so it can go to Drive, Telegram or email. **Import** merges a file into the phone: rows are matched by ID and the newer edit wins, so importing the same file twice changes nothing. The whole file is validated first and applied in one transaction, so a damaged file changes nothing. Because a deletion counts as an edit, a task deleted on the phone after the export stays deleted.
 
 ## Build an installable APK
 
@@ -89,7 +95,7 @@ src/
   domain/       pure TypeScript, no React/Expo: days, periods, goals, progress, tap merging,
                 input validation (error codes, not English text), settings parsing
   db/           Drizzle schema, database client, repositories, re-grouping SQL, useLive()
-  features/     screen logic: useCounter, task view models, goal text, the task form
+  features/     screen logic: useCounter, task view models, goal text, the task form, backup
   i18n/         en.json, ru.json, i18next setup, date and error formatting
   lib/          clock (with dev offset), theme hooks, contrast, week start, haptics
   notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts

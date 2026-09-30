@@ -8,9 +8,13 @@ export function deviceUtcOffsetMin(at: Date): number {
   return -at.getTimezoneOffset();
 }
 
-/** SQLite twin of logicalDate(), for re-grouping entries when a cutoff changes. */
-export const LOGICAL_DATE_SQL =
-  "date(occurred_at / 1000 + utc_offset_min * 60 - :day_start_min * 60, 'unixepoch')";
+/** SQLite twin of logicalDate(); `dayStartMin` is an SQL expression for the cutoff in minutes. */
+export function logicalDateSql(dayStartMin: string): string {
+  return `date(occurred_at / 1000 + utc_offset_min * 60 - (${dayStartMin}) * 60, 'unixepoch')`;
+}
+
+/** For re-grouping entries when a cutoff changes. */
+export const LOGICAL_DATE_SQL = logicalDateSql(':day_start_min');
 
 /**
  * The day an entry belongs to. Works on the wall-clock time the user saw

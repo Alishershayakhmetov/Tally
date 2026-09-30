@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 
 import { formatAmount } from '@/domain/measure';
 import type { Recurrence } from '@/domain/periods';
+import type { StreakUnit } from '@/domain/streaks';
 import { formatDate } from '@/i18n/format';
 
 import type { TaskView } from './taskViews';
@@ -68,4 +69,47 @@ export function endedStatusText(t: TFunction, view: TaskView): string {
 export function endedSuccessfully(view: TaskView): boolean {
   const { summary, task } = view;
   return summary ? summary.total > 0 && summary.met === summary.total : task.total >= task.target;
+}
+
+/** "Need 24/day · 40 ahead of pace", "Need 50 today", or null without a pace window. */
+export function paceText(t: TFunction, view: TaskView): string | null {
+  const { pace, task } = view;
+  if (!pace) return null;
+  const amount = (n: number) => formatAmount(task.measure, n);
+  if (pace.daysLeft === 1) return t('pace.today', { amount: amount(pace.perDay) });
+  const relative =
+    pace.ahead > 0
+      ? t('pace.ahead', { amount: amount(pace.ahead) })
+      : pace.ahead < 0
+        ? t('pace.behind', { amount: amount(-pace.ahead) })
+        : t('pace.onPace');
+  return `${t('pace.perDay', { amount: amount(pace.perDay) })} · ${relative}`;
+}
+
+const STREAK_KEYS: Record<StreakUnit, { current: string; best: string }> = {
+  day: { current: 'streak.days', best: 'streak.bestDays' },
+  week: { current: 'streak.weeks', best: 'streak.bestWeeks' },
+  month: { current: 'streak.months', best: 'streak.bestMonths' },
+};
+
+/** "12-day streak", for the badge's accessibility label. */
+export function streakLabel(t: TFunction, view: TaskView): string {
+  return t(STREAK_KEYS[view.streak.unit].current, { count: view.streak.current });
+}
+
+/** "🔥 12-day streak · best 20", or "Best streak: 20 days" once there's no current streak or the task ended. */
+export function streakText(t: TFunction, view: TaskView): string | null {
+  const { streak, lifecycle } = view;
+  if (lifecycle === 'active' && streak.current > 0) {
+    const current = `🔥 ${streakLabel(t, view)}`;
+    return streak.best > streak.current ? `${current} · ${t('streak.best', { n: streak.best })}` : current;
+  }
+  return streak.best > 0 ? t(STREAK_KEYS[streak.unit].best, { count: streak.best }) : null;
+}
+
+/** Home cards show a badge from this many periods in a row. */
+export const MIN_BADGE_STREAK = 2;
+
+export function showsStreakBadge(view: TaskView): boolean {
+  return view.lifecycle === 'active' && view.streak.current >= MIN_BADGE_STREAK;
 }

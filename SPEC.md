@@ -1,6 +1,6 @@
 # Tally: Specification
 
-> Status: **Phases 0–2 built** (browser-verified; not yet run on a phone, and no APK built yet) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
+> Status: **Phases 0–3 built** (browser-verified; not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
 > Name: *Tally* (working title was *Task Counter*)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
@@ -318,12 +318,37 @@ Each phase ends with verification **on the real Android phone**, not just "it co
 - The reminder time is picked in 15-minute steps. Notification permission is requested when a reminder is first switched on, never at launch.
 - Android package: `com.alishershayakhmetov.taskcounter`. The EAS `preview` profile builds an APK; `production` builds an app bundle.
 
+### Phase 3: pace, streaks, backup
+- **Pace** (counter screen), for goals with a bounded window and something left to do:
+  - A **total goal with an end date**: the window runs from the start date to the end date.
+  - A **weekly or monthly quota**: the window is the current week or month, cut at the end date if that comes first.
+  - Daily quotas and total goals without an end date have no pace line. For a daily quota, "left" already says it all.
+  - **Need per day** = remaining ÷ days left including today, rounded up (to whole minutes for time goals). On the last day it reads "Need 24 today".
+  - **Ahead / behind** compares the total with an even spread up to the **start** of today: target × days before today ÷ days in the window. So you're never "behind" just because the day has begun. It says "on pace" when the difference is under one unit.
+- **Streaks**:
+  - Repeating goals count consecutive **met periods**: days, weeks or months. Rest days in a weekday mask are skipped and don't break the streak.
+  - Total goals count consecutive **days with a positive net amount**.
+  - The current period (today, this week, this month) extends the streak once it's met but doesn't break it while it's still in progress.
+  - Periods are counted from the start date, or from the first entry if that's earlier, to today or the end date.
+  - The counter screen shows the current and best streak. An ended task shows only its best.
+  - A Home card shows a 🔥 badge for active tasks with a current streak of 2 or more.
+- **Backup** (Settings):
+  - **Export** writes one JSON file (`tally-backup-YYYY-MM-DD.json`) and opens the share sheet (Drive, Telegram, email, Files).
+  - The file holds every task and entry, including soft-deleted ones, plus the settings. It leaves out `local_date` (a derived cache) and the running stopwatch (local state).
+  - **Import** picks a file and **merges** it:
+    - Rows are matched by ID, and a row is replaced only when the file's `updated_at` is newer. Deletions count as edits, so a mistaken entry deleted on another phone stays deleted.
+    - Importing the same file twice changes nothing.
+    - The whole file is validated before anything is written, and applied in one transaction, so a bad file changes nothing.
+    - Afterwards `local_date` is re-derived for every entry under the phone's cutoffs.
+    - A summary shows what was added and updated.
+- **Done when:** unit tests cover pace (window edges, the last day, time rounding, the end date inside a week), streaks (rest days, the in-progress period, gaps, week and month runs) and backup (round trip, validation, merge rules). The merge SQL runs in Jest against the real migrations.
+  - On the phone: export, reinstall the app (or clear its data), import, and every task is back with its history. Importing again reports nothing new.
+  - Consequence (accepted with the merge choice): deleting a task on this phone is newer than any earlier backup, so importing that backup doesn't bring the task back. A "replace everything" restore would, if it's ever wanted.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
-| Pace vs deadline ("need 24/day, 40 ahead") | Not chosen for v1. Cheap to add from existing data (pure domain function). |
-| Streaks + history charts | Not chosen for v1. Needs a chart library. The data model already supports it. |
-| JSON export / import | A useful backup before sync exists. Small. |
+| History charts | Needs a chart library. The data model already supports it. |
 | Cloud sync + accounts | Needs a backend choice. The v1 schema is designed for it (§6.3). |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
 | Home-screen widget | Needs native code / a dev build. Nice for a portfolio later. |

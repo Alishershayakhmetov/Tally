@@ -32,13 +32,21 @@ describe('translations', () => {
     expect([...keys(ru as Tree)].sort()).toEqual([...keys(en as Tree)].sort());
   });
 
-  it.each(['goal.daysLeft', 'goal.daysMet', 'goal.weeksMet', 'goal.monthsMet'])(
-    '%s has every plural form each language needs',
-    (key) => {
-      expect(pluralForms(en as Tree, key)).toEqual(['one', 'other']);
-      expect(pluralForms(ru as Tree, key)).toEqual(['few', 'many', 'one', 'other']);
-    },
-  );
+  it.each([
+    'goal.daysLeft',
+    'goal.daysMet',
+    'goal.weeksMet',
+    'goal.monthsMet',
+    'streak.days',
+    'streak.weeks',
+    'streak.months',
+    'streak.bestDays',
+    'streak.bestWeeks',
+    'streak.bestMonths',
+  ])('%s has every plural form each language needs', (key) => {
+    expect(pluralForms(en as Tree, key)).toEqual(['one', 'other']);
+    expect(pluralForms(ru as Tree, key)).toEqual(['few', 'many', 'one', 'other']);
+  });
 
   it('month and weekday lists are complete', () => {
     for (const lang of [en, ru]) {

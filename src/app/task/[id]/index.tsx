@@ -22,7 +22,9 @@ import {
   deadlineText,
   endedStatusText,
   endedSuccessfully,
+  paceText,
   statusText,
+  streakText,
   windowLabel,
 } from '@/features/tasks/goalText';
 import { buildTaskView, type TaskView } from '@/features/tasks/taskViews';
@@ -78,6 +80,8 @@ function Counter({ view }: { view: TaskView }) {
   const unit = task.unitLabel ? ` ${task.unitLabel}` : '';
   const accentText = readableOn(task.color, colors.surface, colors.text);
   const deadline = deadlineText(t, view);
+  const pace = paceText(t, view);
+  const streak = streakText(t, view);
   const unitSuffix = task.unitLabel ? ` · ${task.unitLabel}` : '';
 
   // An ended repeating goal has no meaningful "today", so it shows its whole history.
@@ -165,9 +169,11 @@ function Counter({ view }: { view: TaskView }) {
             {hero.status}
           </Text>
           {deadline && canLog ? <Text style={styles.muted}>{deadline}</Text> : null}
+          {pace ? <Text style={styles.pace}>{pace}</Text> : null}
           {task.recurrence !== 'none' && canLog ? (
             <Text style={styles.allTime}>{t('goal.allTime', { amount: amount(task.total) })}</Text>
           ) : null}
+          {streak ? <Text style={styles.allTime}>{streak}</Text> : null}
         </View>
 
         {isTime ? <Stopwatch task={task} disabled={!canLog} onLogged={recordLogged} /> : null}
@@ -349,6 +355,12 @@ function makeStyles(c: Colors) {
       fontSize: 15,
       fontWeight: '600',
       color: c.textMuted,
+      fontVariant: ['tabular-nums'],
+    },
+    pace: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.text,
       fontVariant: ['tabular-nums'],
     },
     allTime: {

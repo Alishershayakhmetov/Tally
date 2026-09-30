@@ -10,6 +10,7 @@ import { currentLogicalDate, deviceUtcOffsetMin } from '@/domain/days';
 import { formatClock } from '@/domain/format';
 import type { WeekStartPref } from '@/domain/periods';
 import { clampDayStart, type LanguagePref, type ThemePref } from '@/domain/settings';
+import { BackupSection } from '@/features/backup/BackupSection';
 import { setClockOffsetMs, useClockOffsetMs, useNow } from '@/lib/clock';
 import { tapFeedback } from '@/lib/haptics';
 import { useNotificationPermission } from '@/notifications/scheduler';
@@ -89,6 +90,8 @@ export default function SettingsScreen() {
       </Row>
 
       <NotificationsRow />
+
+      <BackupSection />
 
       <Text style={styles.note}>{t('settings.storage')}</Text>
 

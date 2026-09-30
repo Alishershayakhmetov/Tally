@@ -47,6 +47,44 @@
     "allTimeLabel": "All time",
     "archivedLabel": "Archived"
   },
+  "pace": {
+    "perDay": "Need {{amount}}/day",
+    "today": "Need {{amount}} today",
+    "ahead": "{{amount}} ahead of pace",
+    "behind": "{{amount}} behind pace",
+    "onPace": "on pace"
+  },
+  "streak": {
+    "days_one": "{{count}}-day streak",
+    "days_other": "{{count}}-day streak",
+    "weeks_one": "{{count}}-week streak",
+    "weeks_other": "{{count}}-week streak",
+    "months_one": "{{count}}-month streak",
+    "months_other": "{{count}}-month streak",
+    "best": "best {{n}}",
+    "bestDays_one": "Best streak: {{count}} day",
+    "bestDays_other": "Best streak: {{count}} days",
+    "bestWeeks_one": "Best streak: {{count}} week",
+    "bestWeeks_other": "Best streak: {{count}} weeks",
+    "bestMonths_one": "Best streak: {{count}} month",
+    "bestMonths_other": "Best streak: {{count}} months"
+  },
+  "backup": {
+    "title": "Backup",
+    "export": "Export",
+    "import": "Import",
+    "hint": "Export saves every task and its history to one file you can keep in Drive, Telegram or email. Import merges a backup into this phone: new items are added, and where both changed the same item, the newer change wins.",
+    "dialogTitle": "Save Tally backup",
+    "exported": "Backup file ready: {{file}}",
+    "imported": "Imported · tasks +{{tasksAdded}} · entries +{{entriesAdded}} · updated {{updated}}",
+    "nothingNew": "Nothing new: this phone already has everything in the file.",
+    "notBackup": "This isn't a Tally backup file.",
+    "newerFormat": "This backup was made by a newer version of Tally. Update the app to import it.",
+    "invalid": "The backup file is damaged. Nothing was imported.",
+    "readFailed": "Couldn't read the file.",
+    "exportFailed": "Couldn't create the backup.",
+    "importFailed": "Import failed. Nothing was changed."
+  },
   "counter": {
     "of": "of {{target}}",
     "enterAmount": "Enter amount…",

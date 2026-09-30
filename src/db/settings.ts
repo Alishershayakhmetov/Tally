@@ -21,6 +21,11 @@ export function getSettings(): Settings {
   return cache;
 }
 
+/** Drops the cache after settings rows were written outside updateSetting (a backup import). */
+export function reloadSettings(): void {
+  cache = null;
+}
+
 export function useSettings(): Settings {
   return useLive(getSettings);
 }
