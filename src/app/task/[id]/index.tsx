@@ -245,15 +245,24 @@ function Counter({ view }: { view: TaskView }) {
                 </Pressable>
               ))}
               <Text style={styles.hint}>{t('counter.longPressHint')}</Text>
-              <Pressable
-                onPress={() => router.push({ pathname: '/task/[id]/history', params: { id: task.id } })}
-                style={styles.historyLink}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.historyLinkText, { color: accentText }]}>
-                  {t('counter.allHistory')} ›
-                </Text>
-              </Pressable>
+              <View style={styles.links}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/task/[id]/stats', params: { id: task.id } })}
+                  style={styles.historyLink}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.historyLinkText, { color: accentText }]}>{t('stats.open')} ›</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/task/[id]/history', params: { id: task.id } })}
+                  style={styles.historyLink}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.historyLinkText, { color: accentText }]}>
+                    {t('counter.allHistory')} ›
+                  </Text>
+                </Pressable>
+              </View>
             </>
           )}
         </View>
@@ -452,8 +461,12 @@ function makeStyles(c: Colors) {
       color: c.textMuted,
       textAlign: 'center',
     },
+    links: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: spacing.xl,
+    },
     historyLink: {
-      alignSelf: 'center',
       paddingVertical: spacing.sm,
     },
     historyLinkText: {

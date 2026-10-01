@@ -95,6 +95,7 @@ function AppShell() {
         <Stack.Screen name="task/[id]/index" options={{ title: '' }} />
         <Stack.Screen name="task/[id]/edit" options={{ title: t('screens.editTask') }} />
         <Stack.Screen name="task/[id]/history" options={{ title: t('screens.history') }} />
+        <Stack.Screen name="task/[id]/stats" options={{ title: t('screens.stats') }} />
       </Stack>
     </ThemeProvider>
   );

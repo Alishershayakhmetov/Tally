@@ -12,7 +12,8 @@
     "newTask": "New task",
     "editTask": "Edit task",
     "history": "History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "stats": "Statistics"
   },
   "home": {
     "emptyTitle": "No tasks yet",
@@ -68,6 +69,44 @@
     "bestWeeks_other": "Best streak: {{count}} weeks",
     "bestMonths_one": "Best streak: {{count}} month",
     "bestMonths_other": "Best streak: {{count}} months"
+  },
+  "stats": {
+    "open": "Statistics",
+    "empty": "Nothing logged yet. Statistics appear after your first entry.",
+    "total": "Total",
+    "progress": "Progress",
+    "ofTarget": "of {{amount}}",
+    "goalMet": "Goal met",
+    "bestDay": "Best day",
+    "average": "Average per active day",
+    "activeDays": "Active days",
+    "since": "since {{date}}",
+    "bestStreak": "Best streak",
+    "now": "now {{value}}",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "weeks_one": "{{count}} week",
+    "weeks_other": "{{count}} weeks",
+    "months_one": "{{count}} month",
+    "months_other": "{{count}} months",
+    "range": "Chart range",
+    "byDay": "Days",
+    "byWeek": "Weeks",
+    "byMonth": "Months",
+    "last": {
+      "day": "Last 30 days",
+      "week": "Last 12 weeks",
+      "month": "Last 12 months"
+    },
+    "goalLine": "line: goal {{amount}}",
+    "showTable": "Show as a table",
+    "hideTable": "Hide the table",
+    "calendar": "Calendar",
+    "less": "Less",
+    "more": "More",
+    "legendGoal": "Full colour: goal met",
+    "axisMin": "{{n}} min",
+    "axisHours": "{{n}} h"
   },
   "backup": {
     "title": "Backup",

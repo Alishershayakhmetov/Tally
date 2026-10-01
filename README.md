@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phases 0–3
+## Status: Phases 0–4
 
 **Counting (Phase 0)**
 
@@ -39,6 +39,14 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 - **Pace** for a total goal with a deadline, or a weekly/monthly quota: "Need 31/day · 37 ahead of pace". Ahead/behind compares your total with an even spread up to the start of today, so the morning never counts as "behind".
 - **Streaks**: consecutive met days, weeks or months (rest days don't break them), or consecutive days with anything logged for a total goal. A period still in progress extends a streak but never breaks it. The counter shows current and best; Home cards get a 🔥 badge from 2 in a row.
 - **Backup** in Settings. **Export** writes one JSON file (every task and entry, including deletions, plus settings) and opens the share sheet, so it can go to Drive, Telegram or email. **Import** merges a file into the phone: rows are matched by ID and the newer edit wins, so importing the same file twice changes nothing. The whole file is validated first and applied in one transaction, so a damaged file changes nothing. Because a deletion counts as an edit, a task deleted on the phone after the export stays deleted.
+
+**Statistics (Phase 4)**
+
+- A **Statistics** screen per task (from the counter screen):
+  - **Tiles:** total, best day, average per active day, active days, best streak, and either the share of days/weeks/months met or progress toward the target.
+  - **Bar chart** of the last 30 days, 12 weeks or 12 months, with the goal as a line. Tap or drag to read a bar; every bar has a screen-reader label, and the data is also available as a table.
+  - **Calendar heat map:** each day shaded in the task's colour; with a daily goal, the strongest shade means the goal was met.
+- The charts are plain views, with no chart library. Their colours are checked in tests: every task colour reaches 3:1 as a mark in both themes, and the four calendar shades step evenly away from the card.
 
 ## Build an installable APK
 
@@ -91,11 +99,11 @@ CI (`.github/workflows/ci.yml`) runs typecheck, lint, format check and tests. It
 
 ```text
 src/
-  app/          screens (Expo Router): index, settings, task/new, task/[id]/{index,edit,history}
+  app/          screens (Expo Router): index, settings, task/new, task/[id]/{index,edit,history,stats}
   domain/       pure TypeScript, no React/Expo: days, periods, goals, progress, tap merging,
                 input validation (error codes, not English text), settings parsing
   db/           Drizzle schema, database client, repositories, re-grouping SQL, useLive()
-  features/     screen logic: useCounter, task view models, goal text, the task form, backup
+  features/     screen logic: useCounter, task view models, goal text, the task form, backup, stats charts
   i18n/         en.json, ru.json, i18next setup, date and error formatting
   lib/          clock (with dev offset), theme hooks, contrast, week start, haptics
   notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts

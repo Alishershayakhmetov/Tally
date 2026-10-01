@@ -1,6 +1,6 @@
 # Tally: Specification
 
-> Status: **Phases 0–3 built** (browser-verified; not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
+> Status: **Phases 0–4 built** (browser-verified; not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
 > Name: *Tally* (working title was *Task Counter*)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
@@ -345,10 +345,33 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - On the phone: export, reinstall the app (or clear its data), import, and every task is back with its history. Importing again reports nothing new.
   - Consequence (accepted with the merge choice): deleting a task on this phone is newer than any earlier backup, so importing that backup doesn't bring the task back. A "replace everything" restore would, if it's ever wanted.
 
+### Phase 4: statistics
+- A **Statistics** screen per task, opened from the counter screen next to "All history". Tasks have different units, so there's no screen that combines them.
+- **Tiles:**
+  - Total, and the best day with its date.
+  - Average per active day: the net total ÷ days with a positive amount.
+  - Active days, counted since the first entry.
+  - Best streak, with the current one underneath.
+  - For repeating goals, the share of periods met. The period in progress counts only once it's met, so the rate doesn't drop every morning.
+  - For total goals, progress toward the target instead.
+- **Bar chart:**
+  - Ranges are the last 30 days, 12 weeks or 12 months. It opens on the goal's own period.
+  - A goal line is drawn when the bars measure that period, and the caption explains it.
+  - Net-negative periods draw below zero. Axis ticks are clean steps (1-2-5 for counts, whole minutes or hours for time).
+  - Tapping or dragging across the plot picks a bar, and a readout shows its period and amount, with ✓ when the goal was met.
+  - Each bar has a screen-reader label, and "Show as a table" lists every period.
+- **Calendar heat map:**
+  - A month of days in four steps of the task's colour. With a daily goal, the strongest step means "met"; otherwise it's the month's best day. A day with nothing, or a net loss, is neutral.
+  - Months go from the first entry to today. Tapping a day shows its amount.
+- Charts are plain React Native views (no chart library, works in Expo Go). Marks follow the dataviz rules:
+  - Bars are at most 24 px, with a 2 px gap, 4 px rounded at the value end, on hairline gridlines.
+  - Mark colours reach 3:1 against the card. The slate task colour is lightened in dark mode.
+  - The four calendar steps pass the ordinal-ramp checks for all 8 task colours in both themes. The strongest step moves away from the surface: 10% darker in light mode, 30% lighter in dark.
+- **Done when:** unit tests cover summaries, goal rate (rest days, the period in progress), bar series (week start, month and year boundaries), axis steps (negative values, time), heat levels, and the colour ramp. On the phone the screen scrolls smoothly, and dragging across the chart doesn't fight the page scroll.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
-| History charts | Needs a chart library. The data model already supports it. |
 | Cloud sync + accounts | Needs a backend choice. The v1 schema is designed for it (§6.3). |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
 | Home-screen widget | Needs native code / a dev build. Nice for a portfolio later. |

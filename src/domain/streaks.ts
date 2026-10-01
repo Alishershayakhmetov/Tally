@@ -11,7 +11,8 @@ export type StreakUnit = 'day' | 'week' | 'month';
 
 export type Streak = { current: number; best: number; unit: StreakUnit };
 
-function sumOver(period: Period, dailySums: ReadonlyMap<string, number>): number {
+/** Net amount logged on the days of `period`. */
+export function sumOver(period: Period, dailySums: ReadonlyMap<string, number>): number {
   let sum = 0;
   for (let date = period.start; date <= period.end; date = addDays(date, 1)) {
     sum += dailySums.get(date) ?? 0;
@@ -29,6 +30,39 @@ function longestRun(flags: readonly boolean[]): number {
   return best;
 }
 
+/** Days counted: from the start date (or an earlier first entry) to today or the end date. */
+function span(task: GoalTask, today: string, firstEntryDate: string | null): { from: string; until: string } {
+  return {
+    from: firstEntryDate !== null && firstEntryDate < task.startDate ? firstEntryDate : task.startDate,
+    until: task.endDate !== null && task.endDate < today ? task.endDate : today,
+  };
+}
+
+export type PeriodResults = {
+  /** Whether each quota period, oldest first, reached the target. Rest days are not periods. */
+  met: boolean[];
+  /** The last period contains today, so a miss there isn't final yet. */
+  inProgress: boolean;
+};
+
+/** Met or missed for every period of a repeating goal; empty for total goals. */
+export function periodResults(
+  task: GoalTask,
+  today: string,
+  weekStart: Weekday,
+  dailySums: ReadonlyMap<string, number>,
+  firstEntryDate: string | null,
+): PeriodResults {
+  const { from, until } = span(task, today, firstEntryDate);
+  if (task.recurrence === 'none' || from > until) return { met: [], inProgress: false };
+  const periods = periodsBetween(task.recurrence, from, until, weekStart, task.weekdayMask);
+  const last = periods[periods.length - 1];
+  return {
+    met: periods.map((period) => sumOver(period, dailySums) >= task.target),
+    inProgress: last !== undefined && last.start <= today && today <= last.end,
+  };
+}
+
 /**
  * `dailySums` maps logical dates to that day's net amount; `firstEntryDate` is
  * the earliest of them (entries may predate the start date after an edit).
@@ -42,11 +76,10 @@ export function computeStreak(
 ): Streak {
   const unit: StreakUnit =
     task.recurrence === 'weekly' ? 'week' : task.recurrence === 'monthly' ? 'month' : 'day';
-  const until = task.endDate !== null && task.endDate < today ? task.endDate : today;
-  const from = firstEntryDate !== null && firstEntryDate < task.startDate ? firstEntryDate : task.startDate;
-  if (from > until) return { current: 0, best: 0, unit };
 
   if (task.recurrence === 'none') {
+    const { from, until } = span(task, today, firstEntryDate);
+    if (from > until) return { current: 0, best: 0, unit };
     const logged = (date: string) => (dailySums.get(date) ?? 0) > 0;
     const days = Array.from({ length: daysBetween(from, until) + 1 }, (_, i) => logged(addDays(from, i)));
     let date = until === today && !logged(today) ? addDays(today, -1) : until;
@@ -58,10 +91,8 @@ export function computeStreak(
     return { current, best: longestRun(days), unit };
   }
 
-  const periods = periodsBetween(task.recurrence, from, until, weekStart, task.weekdayMask);
-  const met = periods.map((period) => sumOver(period, dailySums) >= task.target);
-  const last = periods.length - 1;
-  const inProgress = last >= 0 && periods[last].start <= today && today <= periods[last].end;
+  const { met, inProgress } = periodResults(task, today, weekStart, dailySums, firstEntryDate);
+  const last = met.length - 1;
   let i = inProgress && !met[last] ? last - 1 : last;
   let current = 0;
   while (i >= 0 && met[i]) {
