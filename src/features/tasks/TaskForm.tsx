@@ -40,7 +40,11 @@ type Props = {
   onSubmit: (value: ValidTaskForm) => void;
   /** Existing entries would change meaning if a task switched between count and time. */
   measureLocked?: boolean;
+  /** Shown above the form, inside its scroll view (the template picker). */
+  header?: ReactNode;
   footer?: ReactNode;
+  /** When this changes, the form reloads `initial` (a template was picked). */
+  resetKey?: string;
 };
 
 export function TaskForm({
@@ -49,7 +53,9 @@ export function TaskForm({
   submitLabel,
   onSubmit,
   measureLocked = false,
+  header,
   footer,
+  resetKey,
 }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -59,6 +65,13 @@ export function TaskForm({
   const weekStart = useWeekStart();
   const [values, setValues] = useState(initial);
   const [errors, setErrors] = useState<TaskFormErrors>({});
+  // Adjusting state during render (not in an effect) when the key changes, as React recommends.
+  const [loadedKey, setLoadedKey] = useState(resetKey);
+  if (resetKey !== loadedKey) {
+    setLoadedKey(resetKey);
+    setValues(initial);
+    setErrors({});
+  }
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [permission, requestPermission] = useNotificationPermission();
   const incrementsPreview = parseIncrements(values.increments);
@@ -107,6 +120,7 @@ export function TaskForm({
       contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + spacing.xxl }]}
       keyboardShouldPersistTaps="handled"
     >
+      {header}
       <View style={styles.preview}>
         <TaskBadge emoji={values.emoji} name={values.name || '?'} color={values.color} size={56} />
         <Text style={styles.previewName} numberOfLines={1}>

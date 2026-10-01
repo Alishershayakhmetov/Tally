@@ -1,6 +1,7 @@
-import { and, asc, between, desc, eq, isNull, sql, sum } from 'drizzle-orm';
+import { and, asc, between, desc, eq, isNotNull, isNull, max, sql, sum } from 'drizzle-orm';
 import { randomUUID } from 'expo-crypto';
 
+import { normalizeNote } from '@/domain/notes';
 import type { Period } from '@/domain/periods';
 import { now } from '@/lib/clock';
 
@@ -15,6 +16,7 @@ export type NewEntry = {
   occurredAt: number;
   utcOffsetMin: number;
   localDate: string;
+  note?: string | null;
 };
 
 const live = (taskId: string) => and(eq(entries.taskId, taskId), isNull(entries.deletedAt));
@@ -23,7 +25,7 @@ export function addEntry(input: NewEntry, at = now()): string {
   const id = randomUUID();
   getDb()
     .insert(entries)
-    .values({ id, ...input, createdAt: at, updatedAt: at })
+    .values({ id, ...input, note: normalizeNote(input.note), createdAt: at, updatedAt: at })
     .run();
   notifyDataChanged();
   return id;
@@ -42,9 +44,37 @@ export function extendEntry(id: string, delta: number, at = now()): number {
   return row.amount;
 }
 
-export function updateEntryAmount(id: string, amount: number, at = now()): void {
-  getDb().update(entries).set({ amount, updatedAt: at }).where(eq(entries.id, id)).run();
+/** Edits an entry's amount and note (History). */
+export function updateEntry(id: string, change: { amount: number; note: string | null }, at = now()): void {
+  getDb()
+    .update(entries)
+    .set({ amount: change.amount, note: normalizeNote(change.note), updatedAt: at })
+    .where(eq(entries.id, id))
+    .run();
   notifyDataChanged();
+}
+
+/** Adds, changes or (with null) removes the note on an entry. */
+export function setEntryNote(id: string, note: string | null, at = now()): void {
+  getDb()
+    .update(entries)
+    .set({ note: normalizeNote(note), updatedAt: at })
+    .where(eq(entries.id, id))
+    .run();
+  notifyDataChanged();
+}
+
+/** Distinct notes across all tasks, most recently used first, for the quick chips. */
+export function recentNotes(limit = 6): string[] {
+  return getDb()
+    .select({ note: entries.note, last: max(entries.updatedAt) })
+    .from(entries)
+    .where(and(isNotNull(entries.note), isNull(entries.deletedAt)))
+    .groupBy(entries.note)
+    .orderBy(desc(max(entries.updatedAt)))
+    .limit(limit)
+    .all()
+    .flatMap((row) => (row.note ? [row.note] : []));
 }
 
 export function softDeleteEntry(id: string, at = now()): void {

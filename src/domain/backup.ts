@@ -1,5 +1,6 @@
 import { MAX_ABS_AMOUNT, MAX_INCREMENTS, MAX_NAME_LENGTH, MAX_UNIT_LENGTH } from './input';
 import type { Measure } from './measure';
+import { MAX_NOTE_LENGTH } from './notes';
 import type { Recurrence } from './periods';
 import { parseReminderTime } from './reminders';
 import { DEFAULT_SETTINGS, isValidDayStart } from './settings';
@@ -41,6 +42,8 @@ export type BackupEntry = {
   source: 'button' | 'manual' | 'timer';
   occurredAt: number;
   utcOffsetMin: number;
+  /** Added in Phase 5; files from before it have no notes and import with null. */
+  note: string | null;
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
@@ -136,6 +139,7 @@ const ENTRY_FIELDS: Record<keyof BackupEntry, Check> = {
   source: oneOf('button', 'manual', 'timer'),
   occurredAt: isTimestamp,
   utcOffsetMin: (v) => isInt(v) && Math.abs(v as number) <= MAX_OFFSET_MIN,
+  note: nullable((v) => typeof v === 'string' && v.length <= MAX_NOTE_LENGTH),
   createdAt: isTimestamp,
   updatedAt: isTimestamp,
   deletedAt: nullable(isTimestamp),
@@ -147,14 +151,18 @@ const SETTING_FIELDS: Record<keyof BackupSetting, Check> = {
   updatedAt: isTimestamp,
 };
 
+/** Fields added after format 1 was first written: a missing one means null, not an error. */
+const LATER_FIELDS = new Set(['note']);
+
 /** Copies exactly the known fields, so extra properties in the file never reach SQL. */
 function pick<T>(raw: unknown, fields: Record<keyof T & string, Check>, path: string): T | string {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return path;
   const source = raw as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [key, check] of Object.entries(fields) as [string, Check][]) {
-    if (!check(source[key])) return `${path}.${key}`;
-    out[key] = source[key];
+    const value = source[key] === undefined && LATER_FIELDS.has(key) ? null : source[key];
+    if (!check(value)) return `${path}.${key}`;
+    out[key] = value;
   }
   return out as T;
 }

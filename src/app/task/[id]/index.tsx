@@ -5,11 +5,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmountDialog } from '@/components/AmountDialog';
+import { NoteDialog } from '@/components/NoteDialog';
 import { ProgressBar } from '@/components/ProgressBar';
 import { TaskBadge } from '@/components/TaskBadge';
 import { UndoBar } from '@/components/UndoBar';
 import { useLive } from '@/db/live';
-import { listRecentEntries } from '@/db/repos/entries';
+import { listRecentEntries, setEntryNote } from '@/db/repos/entries';
 import { getTask, setArchived } from '@/db/repos/tasks';
 import type { Entry } from '@/db/schema';
 import { useSettings } from '@/db/settings';
@@ -18,6 +19,7 @@ import { buttonAmount, formatAmount, formatSignedAmount } from '@/domain/measure
 import { SourceTag } from '@/features/counter/SourceTag';
 import { Stopwatch } from '@/features/counter/Stopwatch';
 import { useCounter } from '@/features/counter/useCounter';
+import { useNoteSuggestions } from '@/features/counter/useNoteSuggestions';
 import {
   deadlineText,
   endedStatusText,
@@ -71,6 +73,8 @@ function Counter({ view }: { view: TaskView }) {
     progress.total,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [noteFor, setNoteFor] = useState<Entry | null>(null);
+  const noteSuggestions = useNoteSuggestions();
 
   const canLog = lifecycle === 'active';
   const isTime = task.measure === 'duration';
@@ -107,6 +111,18 @@ function Counter({ view }: { view: TaskView }) {
             : statusText(t, view),
         success: progress.done,
       };
+
+  /** "+10 · Today · 18:42" */
+  function describeEntry(entry: Entry): string {
+    const time = formatClock(entry.occurredAt, entry.utcOffsetMin);
+    return `${signed(entry.amount)}${unit} · ${formatDay(t, entry.localDate, today)} · ${time}`;
+  }
+
+  function noteLastChange() {
+    const entry = lastChange ? recent.find((e) => e.id === lastChange.entryId) : undefined;
+    dismissUndo();
+    if (entry) setNoteFor(entry);
+  }
 
   async function confirmDeleteEntry(entry: Entry) {
     const ok = await confirmDestructive(
@@ -230,18 +246,23 @@ function Counter({ view }: { view: TaskView }) {
               {recent.map((entry) => (
                 <Pressable
                   key={entry.id}
+                  onPress={() => setNoteFor(entry)}
                   onLongPress={() => confirmDeleteEntry(entry)}
                   style={({ pressed }) => [styles.entry, pressed && styles.entryPressed]}
+                  accessibilityRole="button"
                   accessibilityHint={t('counter.longPressHint')}
                 >
-                  <Text style={[styles.entryAmount, entry.amount < 0 && { color: colors.danger }]}>
-                    {signed(entry.amount)}
-                  </Text>
-                  <Text style={styles.entryWhen}>
-                    {formatDay(t, entry.localDate, today)} ·{' '}
-                    {formatClock(entry.occurredAt, entry.utcOffsetMin)}
-                  </Text>
-                  <SourceTag source={entry.source} />
+                  <View style={styles.entryRow}>
+                    <Text style={[styles.entryAmount, entry.amount < 0 && { color: colors.danger }]}>
+                      {signed(entry.amount)}
+                    </Text>
+                    <Text style={styles.entryWhen}>
+                      {formatDay(t, entry.localDate, today)} ·{' '}
+                      {formatClock(entry.occurredAt, entry.utcOffsetMin)}
+                    </Text>
+                    <SourceTag source={entry.source} />
+                  </View>
+                  {entry.note ? <Text style={styles.note}>“{entry.note}”</Text> : null}
                 </Pressable>
               ))}
               <Text style={styles.hint}>{t('counter.longPressHint')}</Text>
@@ -275,6 +296,18 @@ function Counter({ view }: { view: TaskView }) {
           bottomInset={insets.bottom}
           onUndo={undo}
           onTimeout={dismissUndo}
+          action={{ label: t('notes.add'), onPress: noteLastChange }}
+        />
+      ) : null}
+
+      {noteFor ? (
+        <NoteDialog
+          subtitle={describeEntry(noteFor)}
+          initial={noteFor.note}
+          suggestions={noteSuggestions}
+          color={task.color}
+          onSave={(note) => setEntryNote(noteFor.id, note)}
+          onClose={() => setNoteFor(null)}
         />
       ) : null}
 
@@ -284,6 +317,7 @@ function Counter({ view }: { view: TaskView }) {
           measure={task.measure}
           submitLabel={t('common.add')}
           color={task.color}
+          note={{ initial: null, suggestions: noteSuggestions }}
           onSubmit={logManual}
           onClose={() => setDialogOpen(false)}
         />
@@ -431,9 +465,7 @@ function makeStyles(c: Colors) {
       marginBottom: spacing.xs,
     },
     entry: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
+      gap: spacing.xs,
       backgroundColor: c.surface,
       borderRadius: radius.md,
       paddingHorizontal: spacing.lg,
@@ -441,6 +473,16 @@ function makeStyles(c: Colors) {
     },
     entryPressed: {
       backgroundColor: c.track,
+    },
+    entryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    note: {
+      fontSize: 14,
+      fontStyle: 'italic',
+      color: c.textMuted,
     },
     entryAmount: {
       minWidth: 64,

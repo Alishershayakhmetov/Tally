@@ -6,13 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmountDialog } from '@/components/AmountDialog';
 import { useLive } from '@/db/live';
-import { listEntries, softDeleteEntry, updateEntryAmount } from '@/db/repos/entries';
+import { listEntries, softDeleteEntry, updateEntry } from '@/db/repos/entries';
 import { getTask, todayFor } from '@/db/repos/tasks';
 import type { Entry } from '@/db/schema';
 import { formatClock } from '@/domain/format';
 import { formatAmount, formatSignedAmount } from '@/domain/measure';
 import { isQuotaDay } from '@/domain/periods';
 import { SourceTag } from '@/features/counter/SourceTag';
+import { useNoteSuggestions } from '@/features/counter/useNoteSuggestions';
 import { formatDay } from '@/i18n/format';
 import { useNow } from '@/lib/clock';
 import { confirmDestructive } from '@/lib/confirm';
@@ -46,6 +47,7 @@ export default function HistoryScreen() {
   const task = useLive(() => getTask(id));
   const entries = useLive(() => listEntries(id));
   const [editing, setEditing] = useState<Entry | null>(null);
+  const noteSuggestions = useNoteSuggestions();
   if (!task) return null;
 
   const today = todayFor(task.dayStartMin, nowMs);
@@ -99,11 +101,14 @@ export default function HistoryScreen() {
             accessibilityRole="button"
             accessibilityHint={t('history.hint')}
           >
-            <Text style={[styles.amount, item.amount < 0 && { color: colors.danger }]}>
-              {signed(item.amount)}
-            </Text>
-            <Text style={styles.time}>{formatClock(item.occurredAt, item.utcOffsetMin)}</Text>
-            <SourceTag source={item.source} />
+            <View style={styles.row}>
+              <Text style={[styles.amount, item.amount < 0 && { color: colors.danger }]}>
+                {signed(item.amount)}
+              </Text>
+              <Text style={styles.time}>{formatClock(item.occurredAt, item.utcOffsetMin)}</Text>
+              <SourceTag source={item.source} />
+            </View>
+            {item.note ? <Text style={styles.note}>“{item.note}”</Text> : null}
           </Pressable>
         )}
       />
@@ -114,7 +119,8 @@ export default function HistoryScreen() {
           initialText={formatAmount(task.measure, editing.amount)}
           submitLabel={t('common.save')}
           color={task.color}
-          onSubmit={(amount) => updateEntryAmount(editing.id, amount)}
+          note={{ initial: editing.note, suggestions: noteSuggestions }}
+          onSubmit={(amount, note) => updateEntry(editing.id, { amount, note })}
           onClose={() => setEditing(null)}
         />
       ) : null}
@@ -164,9 +170,7 @@ function makeStyles(c: Colors) {
       fontVariant: ['tabular-nums'],
     },
     entry: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
+      gap: spacing.xs,
       backgroundColor: c.surface,
       borderRadius: radius.md,
       paddingHorizontal: spacing.lg,
@@ -174,6 +178,16 @@ function makeStyles(c: Colors) {
     },
     entryPressed: {
       backgroundColor: c.track,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    note: {
+      fontSize: 14,
+      fontStyle: 'italic',
+      color: c.textMuted,
     },
     amount: {
       minWidth: 64,

@@ -1,5 +1,7 @@
 import { createInstance } from 'i18next';
 
+import { TEMPLATES } from '@/domain/templates';
+
 import en from '../en.json';
 import ru from '../ru.json';
 
@@ -49,6 +51,23 @@ describe('translations', () => {
   ])('%s has every plural form each language needs', (key) => {
     expect(pluralForms(en as Tree, key)).toEqual(['one', 'other']);
     expect(pluralForms(ru as Tree, key)).toEqual(['few', 'many', 'one', 'other']);
+  });
+
+  it('every template has a name, unit and summary in both languages', () => {
+    for (const lang of [en, ru] as Tree[]) {
+      const section = lang.templates as Tree;
+      for (const { id } of TEMPLATES) {
+        const entry = section[id] as Tree;
+        expect(typeof entry.name).toBe('string');
+        expect(typeof entry.unit).toBe('string');
+        expect(typeof entry.summary).toBe('string');
+      }
+    }
+  });
+
+  it('note suggestions are lists of the same length', () => {
+    expect(en.notes.suggestions.length).toBeGreaterThan(0);
+    expect(ru.notes.suggestions).toHaveLength(en.notes.suggestions.length);
   });
 
   it('month and weekday lists are complete', () => {

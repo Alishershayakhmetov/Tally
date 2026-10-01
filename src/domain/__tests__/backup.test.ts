@@ -39,6 +39,7 @@ const entry: BackupEntry = {
   source: 'button',
   occurredAt: 1_790_000_000_000,
   utcOffsetMin: 300,
+  note: 'felt tired',
   createdAt: 3000,
   updatedAt: 3000,
   deletedAt: null,
@@ -137,6 +138,23 @@ describe('parseBackup rejects', () => {
 
   it('a section that is not a list', () => {
     expect(parse({ ...backup(), entries: {} })).toMatchObject({ detail: 'entries' });
+  });
+});
+
+describe('notes (added in Phase 5)', () => {
+  it('imports a file written before notes existed, with null notes', () => {
+    const { note: _note, ...withoutNote } = entry;
+    const parsed = parse(backup({ entries: [withoutNote as BackupEntry] }));
+    expect(parsed.ok && parsed.backup.entries[0].note).toBeNull();
+  });
+
+  it('rejects a note longer than the app allows', () => {
+    expect(parse(backup({ entries: [{ ...entry, note: 'x'.repeat(141) }] }))).toMatchObject({
+      detail: 'entries[0].note',
+    });
+    expect(parse(backup({ entries: [{ ...entry, note: 42 as never }] }))).toMatchObject({
+      detail: 'entries[0].note',
+    });
   });
 });
 

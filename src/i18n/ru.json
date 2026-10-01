@@ -22,7 +22,12 @@
     "finished": "Завершённые",
     "archived": "Архив",
     "openSettings": "Настройки",
-    "timerBanner": "Секундомер · {{name}} · {{time}}"
+    "timerBanner": "Секундомер · {{name}} · {{time}}",
+    "reorder": "Порядок",
+    "reorderDone": "Готово",
+    "reorderHint": "Измените порядок стрелками.",
+    "moveUp": "Переместить «{{name}}» выше",
+    "moveDown": "Переместить «{{name}}» ниже"
   },
   "goal": {
     "left": "ещё {{amount}}",
@@ -155,7 +160,7 @@
     "enterAmount": "Ввести число…",
     "recent": "Недавние",
     "nothingLogged": "Пока ничего нет.",
-    "longPressHint": "Удерживайте запись, чтобы удалить её.",
+    "longPressHint": "Нажмите на запись, чтобы добавить заметку, или удерживайте, чтобы удалить.",
     "allHistory": "Вся история",
     "logged": "Добавлено: {{amount}}",
     "typed": "вручную",
@@ -348,5 +353,59 @@
     "bodyWeekly": "На этой неделе ещё {{remaining}}",
     "bodyMonthly": "В этом месяце ещё {{remaining}}",
     "bodyTotal": "До цели ещё {{remaining}}"
+  },
+  "notes": {
+    "add": "ЗАМЕТКА",
+    "label": "Заметка",
+    "placeholder": "Заметка (необязательно)",
+    "addTitle": "Добавить заметку",
+    "editTitle": "Изменить заметку",
+    "remove": "Удалить",
+    "suggestions": ["Усталость", "Новый рекорд", "Хорошее самочувствие", "Мало времени"]
+  },
+  "templates": {
+    "title": "Начать с шаблона",
+    "blank": "Пустая",
+    "blankSummary": "Своя цель",
+    "pushups": {
+      "name": "Отжимания",
+      "unit": "раз",
+      "summary": "100 в день"
+    },
+    "squats": {
+      "name": "Приседания",
+      "unit": "раз",
+      "summary": "1000 за 30 дней"
+    },
+    "water": {
+      "name": "Вода",
+      "unit": "стаканы",
+      "summary": "8 стаканов в день"
+    },
+    "running": {
+      "name": "Бег",
+      "unit": "км",
+      "summary": "20 км в неделю"
+    },
+    "plank": {
+      "name": "Планка",
+      "unit": "",
+      "summary": "5 мин в день"
+    },
+    "reading": {
+      "name": "Чтение",
+      "unit": "страницы",
+      "summary": "20 страниц в день"
+    },
+    "cycling": {
+      "name": "Велосипед",
+      "unit": "км",
+      "summary": "300 км в месяц"
+    },
+    "meditation": {
+      "name": "Медитация",
+      "unit": "",
+      "summary": "10 мин в день"
+    }
   }
 }

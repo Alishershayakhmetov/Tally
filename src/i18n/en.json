@@ -22,7 +22,12 @@
     "finished": "Finished",
     "archived": "Archived",
     "openSettings": "Settings",
-    "timerBanner": "Stopwatch · {{name}} · {{time}}"
+    "timerBanner": "Stopwatch · {{name}} · {{time}}",
+    "reorder": "Reorder",
+    "reorderDone": "Done",
+    "reorderHint": "Use the arrows to change the order.",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down"
   },
   "goal": {
     "left": "{{amount}} left",
@@ -129,7 +134,7 @@
     "enterAmount": "Enter amount…",
     "recent": "Recent",
     "nothingLogged": "Nothing logged yet.",
-    "longPressHint": "Long-press an entry to delete it.",
+    "longPressHint": "Tap an entry to add a note, long-press to delete it.",
     "allHistory": "All history",
     "logged": "{{amount}} logged",
     "typed": "typed",
@@ -309,5 +314,59 @@
     "bodyWeekly": "{{remaining}} left this week",
     "bodyMonthly": "{{remaining}} left this month",
     "bodyTotal": "{{remaining}} to go"
+  },
+  "notes": {
+    "add": "ADD NOTE",
+    "label": "Note",
+    "placeholder": "Add a note (optional)",
+    "addTitle": "Add a note",
+    "editTitle": "Edit note",
+    "remove": "Remove",
+    "suggestions": ["Felt tired", "New record", "Felt great", "Short on time"]
+  },
+  "templates": {
+    "title": "Start from a template",
+    "blank": "Blank",
+    "blankSummary": "Your own goal",
+    "pushups": {
+      "name": "Push-ups",
+      "unit": "reps",
+      "summary": "100 a day"
+    },
+    "squats": {
+      "name": "Squats",
+      "unit": "reps",
+      "summary": "1000 in 30 days"
+    },
+    "water": {
+      "name": "Water",
+      "unit": "glasses",
+      "summary": "8 glasses a day"
+    },
+    "running": {
+      "name": "Running",
+      "unit": "km",
+      "summary": "20 km a week"
+    },
+    "plank": {
+      "name": "Plank",
+      "unit": "",
+      "summary": "5 min a day"
+    },
+    "reading": {
+      "name": "Reading",
+      "unit": "pages",
+      "summary": "20 pages a day"
+    },
+    "cycling": {
+      "name": "Cycling",
+      "unit": "km",
+      "summary": "300 km a month"
+    },
+    "meditation": {
+      "name": "Meditation",
+      "unit": "",
+      "summary": "10 min a day"
+    }
   }
 }

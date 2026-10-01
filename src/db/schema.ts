@@ -43,6 +43,8 @@ export const entries = sqliteTable(
     utcOffsetMin: integer('utc_offset_min').notNull(),
     // Derived cache of logicalDate(occurred_at, utc_offset_min, cutoff); never synced.
     localDate: text('local_date').notNull(),
+    /** Optional free text ("felt tired"); editing it bumps updated_at like any edit. */
+    note: text('note'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
     deletedAt: integer('deleted_at'),

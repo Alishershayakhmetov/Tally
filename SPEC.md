@@ -1,6 +1,6 @@
 # Tally: Specification
 
-> Status: **Phases 0–4 built** (browser-verified; not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
+> Status: **Phases 0–5 built** (browser-verified; not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
 > Name: *Tally* (working title was *Task Counter*)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
@@ -191,6 +191,7 @@ entries
   utc_offset_min   INTEGER NOT NULL -- device UTC offset at log time; immutable
   local_date       TEXT NOT NULL    -- DERIVED CACHE: logical date under the task's
                                     -- current effective cutoff, 'YYYY-MM-DD'
+  note             TEXT             -- optional, ≤ 140 chars (Phase 5, migration 0003)
   created_at, updated_at, deleted_at
   INDEX (task_id, local_date) WHERE deleted_at IS NULL
 
@@ -369,9 +370,26 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - The four calendar steps pass the ordinal-ramp checks for all 8 task colours in both themes. The strongest step moves away from the surface: 10% darker in light mode, 30% lighter in dark.
 - **Done when:** unit tests cover summaries, goal rate (rest days, the period in progress), bar series (week start, month and year boundaries), axis steps (negative values, time), heat levels, and the colour ramp. On the phone the screen scrolls smoothly, and dragging across the chart doesn't fight the page scroll.
 
+### Phase 5: order, templates, notes
+- **Reorder** (Home): a **Reorder** link above the active tasks (when there are 2 or more) switches to compact rows with **Move up / Move down** buttons, disabled at the ends. Finished/Archived sections and the New task button are hidden until **Done**.
+  - A move gives only the moved task a new `sort_order`, the midpoint between its new neighbours (or one past the end). One changed row keeps future sync merges small.
+  - If two neighbours share a value, or floating point runs out of room, the list is renumbered and only rows whose value changes are written.
+- **Templates** (New task): "Start from a template" lists a blank option and 8 built-in starters, translated into EN/RU:
+  - 100 push-ups a day, 1000 squats in 30 days, 8 glasses of water a day, run 20 km a week, plank 5 min a day, read 20 pages a day, cycle 300 km a month, meditate 10 min a day.
+  - Picking one fills the form (name, unit, icon, colour, goal, target, buttons, deadline), and everything stays editable.
+  - The form reloads through a reset key rather than remounting, so the picker keeps its scroll position.
+- **Notes on entries:** an optional `note` (≤ 140 characters, whitespace collapsed, empty means none). Editing it bumps `updated_at`, so backup merges (and later sync) carry it.
+  - **Where:** "ADD NOTE" on the Undo bar right after logging, a note field in Enter amount, tapping any recent entry on the counter screen (add, edit or remove), and the History edit dialog (amount and note together).
+  - **Quick chips:** the user's most recent distinct notes first, then built-in suggestions ("Felt tired", "New record", "Felt great", "Short on time"). Tapping a chip fills the note; tapping it again clears it.
+  - Notes show in italics under the entry on the counter screen and in History.
+  - **Backups:** notes are included. Files from before Phase 5 have no `note` and still import, as null. That's why the format number stays 1.
+- **Done when:** unit tests cover note normalisation and suggestions, every move case (edges, gaps, ties, 200 halvings of one gap), and that every template fills a valid form in both languages. The SQL tests run migration 0003 and import a note.
+  - On the phone: reorder survives a restart, a template creates a working task, and a note added from the Undo bar shows in History.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
+| End-to-end tests (Maestro) | Deferred at the user's request (2026-10-01). Plan: flows in `.maestro/` and an EAS workflow that builds a test APK and runs them on Expo's Android emulator (this PC has no Android SDK). |
 | Cloud sync + accounts | Needs a backend choice. The v1 schema is designed for it (§6.3). |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
 | Home-screen widget | Needs native code / a dev build. Nice for a portfolio later. |

@@ -85,6 +85,7 @@ export const UPSERT_ENTRY = upsert<BackupEntry>(
     ['source', 'source'],
     ['occurred_at', 'occurredAt'],
     ['utc_offset_min', 'utcOffsetMin'],
+    ['note', 'note'],
     ['created_at', 'createdAt'],
     ['updated_at', 'updatedAt'],
     ['deleted_at', 'deletedAt'],

@@ -3,6 +3,7 @@ import { randomUUID } from 'expo-crypto';
 
 import { deviceUtcOffsetMin, effectiveDayStart, logicalDate } from '@/domain/days';
 import type { ValidTaskForm } from '@/domain/input';
+import type { Ordered } from '@/domain/order';
 import { now } from '@/lib/clock';
 
 import { getDb } from '../client';
@@ -93,6 +94,17 @@ export function setArchived(id: string, archived: boolean, at = now()): void {
       .where(eq(tasks.id, id))
       .run();
     if (archived) tx.delete(activeTimer).where(eq(activeTimer.taskId, id)).run();
+  });
+  notifyDataChanged();
+}
+
+/** Applies new sort orders from moveItem() (usually one row). */
+export function reorderTasks(updates: readonly Ordered[], at = now()): void {
+  if (updates.length === 0) return;
+  getDb().transaction((tx) => {
+    for (const { id, sortOrder } of updates) {
+      tx.update(tasks).set({ sortOrder, updatedAt: at }).where(eq(tasks.id, id)).run();
+    }
   });
   notifyDataChanged();
 }

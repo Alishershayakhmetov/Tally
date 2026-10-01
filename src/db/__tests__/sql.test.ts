@@ -129,6 +129,7 @@ describe('backup import SQL (SPEC §10, Phase 3)', () => {
     source: 'button',
     occurredAt: Date.parse('2026-09-29T02:00:00+05:00'),
     utcOffsetMin: ALMATY,
+    note: 'felt tired',
     createdAt: 3000,
     updatedAt: 3000,
     deletedAt: null,
@@ -157,7 +158,11 @@ describe('backup import SQL (SPEC §10, Phase 3)', () => {
       updated_at: 2000,
       deleted_at: null,
     });
-    expect(row(db, 'entries', 'late-night')).toMatchObject({ amount: 20, utc_offset_min: ALMATY });
+    expect(row(db, 'entries', 'late-night')).toMatchObject({
+      amount: 20,
+      utc_offset_min: ALMATY,
+      note: 'felt tired',
+    });
   });
 
   it("derives local_date under each task's effective cutoff", () => {

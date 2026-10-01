@@ -28,8 +28,8 @@ export function useCounter(task: TaskWithTotal, windowTotal: number) {
     else tapFeedback();
   }
 
-  function insert(amount: number, source: EntrySource, at: number): string {
-    return addEntry({ taskId: task.id, amount, source, ...stamp(task, at) }, at);
+  function insert(amount: number, source: EntrySource, at: number, note: string | null = null): string {
+    return addEntry({ taskId: task.id, amount, source, note, ...stamp(task, at) }, at);
   }
 
   function logButton(delta: number) {
@@ -50,9 +50,9 @@ export function useCounter(task: TaskWithTotal, windowTotal: number) {
     afterChange(delta);
   }
 
-  function logManual(amount: number) {
+  function logManual(amount: number, note: string | null = null) {
     burst.current = null;
-    const entryId = insert(amount, 'manual', now());
+    const entryId = insert(amount, 'manual', now(), note);
     setLastChange({ entryId, amount });
     afterChange(amount);
   }

@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phases 0–4
+## Status: Phases 0–5
 
 **Counting (Phase 0)**
 
@@ -47,6 +47,15 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
   - **Bar chart** of the last 30 days, 12 weeks or 12 months, with the goal as a line. Tap or drag to read a bar; every bar has a screen-reader label, and the data is also available as a table.
   - **Calendar heat map:** each day shaded in the task's colour; with a daily goal, the strongest shade means the goal was met.
 - The charts are plain views, with no chart library. Their colours are checked in tests: every task colour reaches 3:1 as a mark in both themes, and the four calendar shades step evenly away from the card.
+
+**Order, templates and notes (Phase 5)**
+
+- **Reorder** tasks on Home: tap **Reorder**, then use the ↑/↓ buttons, which work with screen readers too. Each move rewrites only the moved task's position.
+- **Templates:** New task starts with a row of 8 ready-made goals (100 push-ups a day, 1000 squats in 30 days, 8 glasses of water, run 20 km a week, plank 5 min, read 20 pages, cycle 300 km a month, meditate 10 min). Picking one fills the form, and you can change anything before saving.
+- **Notes on entries** ("felt tired", "new record"):
+  - Add one from the Undo bar right after logging, while typing an amount, by tapping a recent entry, or in History.
+  - Quick chips offer your recent notes and a few suggestions.
+  - Notes are included in backups, and older backup files without notes still import.
 
 ## Build an installable APK
 

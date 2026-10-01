@@ -14,9 +14,11 @@ type Props = {
   bottomInset: number;
   onUndo: () => void;
   onTimeout: () => void;
+  /** A second action before Undo, such as "Add note". */
+  action?: { label: string; onPress: () => void };
 };
 
-export function UndoBar({ message, resetKey, bottomInset, onUndo, onTimeout }: Props) {
+export function UndoBar({ message, resetKey, bottomInset, onUndo, onTimeout, action }: Props) {
   const { t } = useTranslation();
   const styles = useThemedStyles(makeStyles);
 
@@ -30,6 +32,11 @@ export function UndoBar({ message, resetKey, bottomInset, onUndo, onTimeout }: P
       <Text style={styles.message} numberOfLines={1}>
         {message}
       </Text>
+      {action ? (
+        <Pressable onPress={action.onPress} hitSlop={12} accessibilityRole="button">
+          <Text style={styles.undo}>{action.label}</Text>
+        </Pressable>
+      ) : null}
       <Pressable onPress={onUndo} hitSlop={12} accessibilityRole="button">
         <Text style={styles.undo}>{t('common.undo')}</Text>
       </Pressable>

@@ -17,6 +17,8 @@ import { formatError } from '@/i18n/format';
 import { useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
 
+import { NoteField } from './NoteField';
+
 type Props = {
   title: string;
   /** Time amounts are typed as minutes or m:ss and submitted in seconds. */
@@ -25,7 +27,10 @@ type Props = {
   initialText?: string;
   submitLabel: string;
   color: string;
-  onSubmit: (amount: number) => void;
+  /** Shows a note field (with quick chips) under the amount. */
+  note?: { initial: string | null; suggestions: readonly string[] };
+  /** `note` is the typed text when the note field is shown, otherwise null. */
+  onSubmit: (amount: number, note: string | null) => void;
   onClose: () => void;
 };
 
@@ -42,12 +47,14 @@ export function AmountDialog({
   initialText = '',
   submitLabel,
   color,
+  note,
   onSubmit,
   onClose,
 }: Props) {
   const { t } = useTranslation();
   const styles = useThemedStyles(makeStyles);
   const [text, setText] = useState(initialText);
+  const [noteText, setNoteText] = useState(note?.initial ?? '');
   const [touched, setTouched] = useState(false);
   const parsed = parseAmount(text, measure);
   const isTime = measure === 'duration';
@@ -55,7 +62,7 @@ export function AmountDialog({
   function submit() {
     setTouched(true);
     if (!parsed.ok) return;
-    onSubmit(parsed.value);
+    onSubmit(parsed.value, note ? noteText : null);
     onClose();
   }
 
@@ -97,6 +104,7 @@ export function AmountDialog({
             />
           </View>
           {touched && !parsed.ok ? <Text style={styles.error}>{formatError(t, parsed.error)}</Text> : null}
+          {note ? <NoteField value={noteText} onChange={setNoteText} suggestions={note.suggestions} /> : null}
           <View style={styles.actions}>
             <Pressable onPress={onClose} style={styles.secondary} accessibilityRole="button">
               <Text style={styles.secondaryText}>{t('common.cancel')}</Text>
