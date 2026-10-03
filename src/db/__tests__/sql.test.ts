@@ -59,6 +59,14 @@ describe('migrations', () => {
       .map((r) => (r as { name: string }).name);
     expect(tables).toEqual(['active_timer', 'entries', 'settings', 'tasks']);
   });
+
+  it('add the countdown length to the timer (0004)', () => {
+    const columns = migratedDb()
+      .prepare('PRAGMA table_info(active_timer)')
+      .all()
+      .map((r) => r as { name: string; notnull: number });
+    expect(columns.find((c) => c.name === 'countdown_ms')).toMatchObject({ notnull: 0 });
+  });
 });
 
 describe('re-grouping when a cutoff changes (SPEC §3.5)', () => {

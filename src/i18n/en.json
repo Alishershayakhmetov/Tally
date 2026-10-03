@@ -13,7 +13,8 @@
     "editTask": "Edit task",
     "history": "History",
     "settings": "Settings",
-    "stats": "Statistics"
+    "stats": "Statistics",
+    "tap": "Tap mode"
   },
   "home": {
     "emptyTitle": "No tasks yet",
@@ -23,11 +24,18 @@
     "archived": "Archived",
     "openSettings": "Settings",
     "timerBanner": "Stopwatch · {{name}} · {{time}}",
+    "countdownBanner": "Countdown · {{name}} · {{time}}",
     "reorder": "Reorder",
     "reorderDone": "Done",
     "reorderHint": "Use the arrows to change the order.",
     "moveUp": "Move {{name}} up",
     "moveDown": "Move {{name}} down"
+  },
+  "today": {
+    "progress_one": "{{done}} of {{count}} daily goal done",
+    "progress_other": "{{done}} of {{count}} daily goals done",
+    "allDone": "All {{n}} daily goals done",
+    "left": "Still to do: {{names}}"
   },
   "goal": {
     "left": "{{amount}} left",
@@ -154,9 +162,36 @@
     "discard": "Discard",
     "discardTitle": "Discard this timer?",
     "discardBody": "The time won’t be logged.",
-    "otherTimer": "The stopwatch is running for “{{name}}”.",
+    "otherTimer": "A timer is running for “{{name}}”.",
     "timerTag": "stopwatch",
     "timerLabel": "Stopwatch"
+  },
+  "countdown": {
+    "channel": "Timers",
+    "doneBody": "{{time}} is up. Stop the timer to log it.",
+    "mode": "Timer mode",
+    "stopwatch": "Stopwatch",
+    "countdown": "Countdown",
+    "start": "Start countdown",
+    "less": "1 minute less",
+    "more": "1 minute more",
+    "length": "Countdown length",
+    "lengthLabel": "Countdown length {{time}}",
+    "editHint": "Opens a field to type the time",
+    "lengthHint": "Minutes (e.g. 5), m:ss or h:mm:ss.",
+    "set": "Set",
+    "caption": "Countdown · {{time}}",
+    "overtime": "✓ {{time}} done · overtime",
+    "noAlert": "Notifications are off for Tally, so there’s no sound at 0:00.",
+    "noAlertWeb": "The alert at 0:00 only works in the phone app."
+  },
+  "tap": {
+    "open": "Tap mode",
+    "openHint": "Turns the whole screen into a +1 button",
+    "thisSet": "This set",
+    "hint": "Tap anywhere to add 1",
+    "areaHint": "This set: {{n}}",
+    "done": "Done"
   },
   "amount": {
     "title": "Enter amount",
@@ -248,7 +283,9 @@
     "dayStartInvalid": "Pick a time between 00:00 and 12:00",
     "durationInvalid": "Enter minutes, or m:ss / h:mm:ss",
     "durationTargetInvalid": "Target must be a time above 0, e.g. 60 or 1:00:00",
-    "reminderInvalid": "Pick a time"
+    "reminderInvalid": "Pick a time",
+    "countdownInvalid": "Enter a time above 0, e.g. 5 or 1:30",
+    "countdownTooLong": "At most 24 hours"
   },
   "history": {
     "empty": "Nothing logged yet.",
@@ -368,5 +405,9 @@
       "unit": "",
       "summary": "10 min a day"
     }
+  },
+  "restart": {
+    "action": "Do it again",
+    "note": "A fresh copy of “{{name}}” that starts today and runs as long as the first one. The finished one stays under Finished."
   }
 }

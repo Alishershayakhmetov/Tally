@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phases 0–5
+## Status: Phases 0–6
 
 **Counting (Phase 0)**
 
@@ -56,6 +56,18 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
   - Add one from the Undo bar right after logging, while typing an amount, by tapping a recent entry, or in History.
   - Quick chips offer your recent notes and a few suggestions.
   - Notes are included in backups, and older backup files without notes still import.
+
+**Quick logging and overview (Phase 6)**
+
+- **Countdown** for time goals: the timer panel switches between Stopwatch and Countdown.
+  - The length starts at what's left today (or the pace line's need per day). Change it by a minute with −/+, or tap it to type a time.
+  - At 0:00 a notification sounds, and the countdown keeps running as overtime (+0:12). Stop logs the whole time, so holding a plank longer still counts.
+  - While Tally is open the alert comes exactly on time. With the app closed it's a scheduled notification, which Android may deliver late (see Known limitations).
+- **Tap mode** for count goals: the whole screen becomes a +1 button, for logging in the middle of a set (tap with your nose during push-ups).
+  - It shows this set's count and today's progress, and keeps the screen on.
+  - Fast taps merge into one entry, like the buttons. A −1 button fixes a stray tap.
+- **Today summary** on Home: "3 of 5 daily goals done", with one segment per goal, filled in its colour once met. It counts daily goals that have a quota today, and appears once there are two or more.
+- **Do it again** on a finished challenge opens New task with the same settings, starting today and lasting as long as the first run. The finished one stays under Finished.
 
 ## Build an installable APK
 
@@ -149,14 +161,14 @@ If downloads from `dl.google.com` are slow on your network, set `E2E_GOOGLE_CDN=
 
 ```text
 src/
-  app/          screens (Expo Router): index, settings, task/new, task/[id]/{index,edit,history,stats}
+  app/          screens (Expo Router): index, settings, task/new, task/[id]/{index,edit,history,stats,tap}
   domain/       pure TypeScript, no React/Expo: days, periods, goals, progress, tap merging,
                 input validation (error codes, not English text), settings parsing
   db/           Drizzle schema, database client, repositories, re-grouping SQL, useLive()
   features/     screen logic: useCounter, task view models, goal text, the task form, backup, stats charts
   i18n/         en.json, ru.json, i18next setup, date and error formatting
   lib/          clock (with dev offset), theme hooks, contrast, week start, haptics
-  notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts
+  notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts, and the countdown alert
   components/   shared UI: cards, dialogs, calendar, segmented control, steppers
 drizzle/        generated SQL migrations, bundled into the app
 assets/         icon.svg (the icon master) and the PNGs exported from it: launcher, adaptive
@@ -175,4 +187,5 @@ assets/         icon.svg (the icon master) and the PNGs exported from it: launch
 - **Web is not supported.** `expo-sqlite` 57.0.3's web build (alpha) truncates any synchronous result longer than 255 bytes: `web/WorkerChannel.ts` writes the result length with `Uint8Array.set(new Uint32Array([length]))`, which keeps only `length % 256`. Android and iOS use the native module and aren't affected. The Metro `wasm` setting and the cross-origin headers in `app.json` are kept for when this is fixed upstream. Web also needs cross-origin isolation, which `npx expo start` doesn't currently send.
 - Verified so far in a browser (with that bug patched locally) and by unit tests. **Not yet run on a real phone**, so Android-only behaviour is unconfirmed: notifications firing, haptics, keeping the screen on, the system dark-mode switch, and `Intl.PluralRules` on Hermes (polyfilled if missing).
 - **Reminders** don't exist on web. On Android they use inexact alarms, so they can arrive a few minutes late (exact alarms need a special permission that Android 14 denies by default). They're planned two weeks ahead, so if the app isn't opened for two weeks, they stop until it is.
+- **The countdown's 0:00 alert** has the same limit when Tally is closed or the phone is locked: it can arrive late. While the app is open (the counter screen keeps the screen on while a timer runs), the app posts the alert itself, on time.
 - Header actions ("Settings", "Edit") are text buttons; no icon set is installed.

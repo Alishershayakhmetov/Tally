@@ -1,3 +1,4 @@
+import { addDays } from './days';
 import {
   daysBetween,
   isQuotaDay,
@@ -30,6 +31,15 @@ export function lifecycleOf(task: GoalTask, today: string): Lifecycle {
 export function daysLeft(endDate: string | null, today: string): number | null {
   if (endDate === null || today > endDate) return null;
   return daysBetween(today, endDate) + 1;
+}
+
+/**
+ * "Do it again" (Phase 6): a finished challenge copied to start on `today`
+ * keeps its length, so "1000 squats in 30 days" again runs 30 days.
+ */
+export function restartEndDate(startDate: string, endDate: string | null, today: string): string | null {
+  if (endDate === null) return null;
+  return addDays(today, Math.max(0, daysBetween(startDate, endDate)));
 }
 
 /** The period the counter screen and card show, or the whole history for total goals. */

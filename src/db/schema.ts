@@ -66,6 +66,8 @@ export const activeTimer = sqliteTable('active_timer', {
   utcOffsetMin: integer('utc_offset_min').notNull(),
   runningSince: integer('running_since'),
   accumulatedMs: integer('accumulated_ms').notNull(),
+  /** Set for a countdown: its length. Null for a plain stopwatch. */
+  countdownMs: integer('countdown_ms'),
 });
 
 export const settings = sqliteTable('settings', {

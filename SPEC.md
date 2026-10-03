@@ -400,6 +400,34 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - The emulator must use the GPU (`-gpu host`). With software rendering, adb lost the device between flows ("device offline").
 - Not in CI: GitHub's runners would need an emulator. An EAS Workflow with a `maestro` job is the cloud option if wanted.
 
+### Phase 6: quick logging and overview, added 2026-10-03
+- **Countdown** (time goals): the timer panel has a **Stopwatch / Countdown** switch.
+  - The length starts at what's left today for a daily goal (the whole target once it's met), the pace line's per-day need for goals that have one, and 10 minutes otherwise. −1 min / +1 min change it, and tapping the time opens a dialog to type `5`, `1:30` or `1:05:00`. The range is 1 s to 24 h.
+  - The chosen mode and a typed length are remembered per task while the app runs, not across restarts.
+  - It's the same persisted timer as the stopwatch, with the length stored on `active_timer.countdown_ms` (migration 0004). It's local state, so it's never synced or backed up.
+  - **At 0:00** it alerts and **keeps counting as overtime** (`+0:12`, in the success colour). Stop logs the whole elapsed time, so holding a plank longer still counts. Stopping early logs what was done.
+  - **The alert** is a notification on its own "Timers" channel, so reminders can be muted separately:
+    - The re-plan that runs after every data change also schedules the alert for the countdown's end. Pausing, stopping or discarding re-plans, which cancels it.
+    - Without the exact-alarm permission, Android may deliver a scheduled notification minutes late. So while the app runs, a JS timer posts the alert at 0:00 itself, after cancelling the scheduled one, and skips it if one is already showing.
+    - An alert more than 5 s overdue (the app was asleep) is left to the scheduled notification.
+    - Stopping or discarding the countdown dismisses a "time's up" notification that's still showing.
+  - Notification permission is asked the first time a countdown starts. If it's denied, the panel says there will be no sound, and the screen only shows overtime (plus a vibration if Vibration is on).
+  - Home's timer banner shows the time left or the overtime.
+- **Tap mode** (count goals): a "Tap mode" button next to "Enter amount…" opens a screen where the whole coloured area is a **+1** button.
+  - Every tap goes through the counter screen's logic, so taps within 2 s merge into one entry, and the goal-reached vibration works.
+  - It shows the task, **this set** (net taps since opening the screen), and the current period's progress. The screen stays on.
+  - A −1 button below the area logs a −1 (its own entry, as on the counter screen). Done goes back.
+  - One tap is always +1, whatever the task's buttons are.
+- **Today summary** (Home, above the cards): "3 of 5 daily goals done", or "All 5 daily goals done" in the success colour.
+  - It counts **active daily goals with a quota today**. Weekly, monthly and total goals have no fixed amount for today, and a rest day has no quota, so they're left out.
+  - It's shown once there are **2 or more** such goals; with one, it would only repeat that card. It's hidden while reordering.
+  - One segment per goal, in Home order, filled with the task's colour (nudged to 3:1 against the card) once met. The screen-reader label lists the goals still to do.
+- **Do it again** (counter screen of a finished task, on the "This task ended" banner) opens New task pre-filled from that task, without the template row.
+  - Everything is copied (name, icon, colour, goal, buttons, weekdays, cutoff, reminder). The end date keeps the original length: a 30-day challenge again runs 30 days from today.
+  - The finished task stays under Finished with its history.
+- **Done when:** unit tests cover the countdown (time left rounding, overtime, pauses moving the end, the default length, ± steps and typed lengths), the Today summary (which goals count, the minimum of 2), the restart end date (month and leap-year ends), the new plural key, and migration 0004.
+  - **Status:** unit tests, typecheck and lint pass. Not yet run on the emulator or a phone (no native build was made for this phase), so the alert timing, tap-mode feel and layouts are unverified.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|

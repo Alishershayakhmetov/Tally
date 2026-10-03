@@ -14,8 +14,11 @@ export function getActiveTimer(): TimerState | undefined {
   return getDb().select().from(activeTimer).get();
 }
 
-/** Only one stopwatch runs at a time; returns false if another one exists. */
-export function startTimer(taskId: string, at = now()): boolean {
+/**
+ * Only one timer runs at a time; returns false if another one exists.
+ * `countdownMs` makes it a countdown of that length (Phase 6).
+ */
+export function startTimer(taskId: string, countdownMs: number | null = null, at = now()): boolean {
   if (getActiveTimer()) return false;
   getDb()
     .insert(activeTimer)
@@ -25,6 +28,7 @@ export function startTimer(taskId: string, at = now()): boolean {
       utcOffsetMin: deviceUtcOffsetMin(new Date(at)),
       runningSince: at,
       accumulatedMs: 0,
+      countdownMs,
     })
     .run();
   notifyDataChanged();

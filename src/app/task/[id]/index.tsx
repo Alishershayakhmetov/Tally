@@ -16,8 +16,9 @@ import type { Entry } from '@/db/schema';
 import { useSettings } from '@/db/settings';
 import { formatClock, formatSigned } from '@/domain/format';
 import { buttonAmount, formatAmount, formatSignedAmount } from '@/domain/measure';
+import { defaultCountdownSeconds } from '@/domain/timer';
 import { SourceTag } from '@/features/counter/SourceTag';
-import { Stopwatch } from '@/features/counter/Stopwatch';
+import { TimerPanel } from '@/features/counter/TimerPanel';
 import { useCounter } from '@/features/counter/useCounter';
 import { useNoteSuggestions } from '@/features/counter/useNoteSuggestions';
 import {
@@ -154,9 +155,18 @@ function Counter({ view }: { view: TaskView }) {
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}>
         {lifecycle === 'finished' && task.endDate ? (
-          <Text style={styles.banner}>
-            {t('counter.finishedBanner', { date: formatDate(t, task.endDate, today) })}
-          </Text>
+          <View style={styles.bannerRow}>
+            <Text style={[styles.banner, styles.bannerText]}>
+              {t('counter.finishedBanner', { date: formatDate(t, task.endDate, today) })}
+            </Text>
+            <Pressable
+              onPress={() => router.push({ pathname: '/task/new', params: { from: task.id } })}
+              hitSlop={8}
+              accessibilityRole="button"
+            >
+              <Text style={styles.headerAction}>{t('restart.action')}</Text>
+            </Pressable>
+          </View>
         ) : null}
         {lifecycle === 'archived' ? (
           <View style={styles.bannerRow}>
@@ -192,7 +202,19 @@ function Counter({ view }: { view: TaskView }) {
           {streak ? <Text style={styles.allTime}>{streak}</Text> : null}
         </View>
 
-        {isTime ? <Stopwatch task={task} disabled={!canLog} onLogged={recordLogged} /> : null}
+        {isTime ? (
+          <TimerPanel
+            task={task}
+            disabled={!canLog}
+            defaultCountdown={defaultCountdownSeconds({
+              recurrence: task.recurrence,
+              target: task.target,
+              remaining: progress.remaining,
+              pacePerDay: view.pace?.perDay ?? null,
+            })}
+            onLogged={recordLogged}
+          />
+        ) : null}
 
         <View style={[styles.pad, !canLog && styles.disabled]} pointerEvents={canLog ? 'auto' : 'none'}>
           {task.increments.map((delta) => (
@@ -228,13 +250,25 @@ function Counter({ view }: { view: TaskView }) {
         </View>
 
         {canLog ? (
-          <Pressable
-            onPress={() => setDialogOpen(true)}
-            style={({ pressed }) => [styles.enterAmount, pressed && styles.pressed]}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.enterAmountText, { color: accentText }]}>{t('counter.enterAmount')}</Text>
-          </Pressable>
+          <View style={styles.pills}>
+            <Pressable
+              onPress={() => setDialogOpen(true)}
+              style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.pillText, { color: accentText }]}>{t('counter.enterAmount')}</Text>
+            </Pressable>
+            {isTime ? null : (
+              <Pressable
+                onPress={() => router.push({ pathname: '/task/[id]/tap', params: { id: task.id } })}
+                style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityHint={t('tap.openHint')}
+              >
+                <Text style={[styles.pillText, { color: accentText }]}>{t('tap.open')}</Text>
+              </Pressable>
+            )}
+          </View>
         ) : null}
 
         <View style={styles.recent}>
@@ -440,8 +474,13 @@ function makeStyles(c: Colors) {
     pressed: {
       opacity: 0.75,
     },
-    enterAmount: {
-      alignSelf: 'center',
+    pills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: spacing.sm,
+    },
+    pill: {
       paddingHorizontal: spacing.xl,
       paddingVertical: spacing.md,
       borderRadius: radius.pill,
@@ -449,7 +488,7 @@ function makeStyles(c: Colors) {
       borderWidth: 1,
       borderColor: c.border,
     },
-    enterAmountText: {
+    pillText: {
       fontSize: 16,
       fontWeight: '700',
     },

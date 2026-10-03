@@ -2,6 +2,7 @@ import { parseDurationText, type Measure } from './measure';
 import type { Recurrence } from './periods';
 import { parseReminderTime } from './reminders';
 import { isValidDayStart } from './settings';
+import { MAX_COUNTDOWN_SECONDS } from './timer';
 
 export const DEFAULT_INCREMENTS = [-1, 1, 5, 10];
 export const MAX_INCREMENTS = 6;
@@ -30,11 +31,13 @@ export type InputError = {
     | 'unitTooLong'
     | 'weekdaysEmpty'
     | 'endBeforeStart'
-    | 'dayStartInvalid';
+    | 'dayStartInvalid'
+    | 'countdownInvalid'
+    | 'countdownTooLong';
   params?: Record<string, string | number>;
 };
 
-type Result<T> = { ok: true; value: T } | { ok: false; error: InputError };
+export type Result<T> = { ok: true; value: T } | { ok: false; error: InputError };
 
 const SIGNED_INT = /^([+\-−]?)(\d+)$/;
 
@@ -64,6 +67,14 @@ export function parseTarget(text: string, measure: Measure = 'count'): Result<nu
     return { ok: false, error: { code: measure === 'duration' ? 'durationTargetInvalid' : 'targetInvalid' } };
   }
   if (value > MAX_ABS_AMOUNT) return { ok: false, error: { code: 'targetTooLarge' } };
+  return { ok: true, value };
+}
+
+/** A countdown length: minutes, m:ss or h:mm:ss, above 0 and at most 24 h. In seconds. */
+export function parseCountdown(text: string): Result<number> {
+  const value = parseDurationText(text);
+  if (value === null || value <= 0) return { ok: false, error: { code: 'countdownInvalid' } };
+  if (value > MAX_COUNTDOWN_SECONDS) return { ok: false, error: { code: 'countdownTooLong' } };
   return { ok: true, value };
 }
 

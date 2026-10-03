@@ -1,0 +1,1 @@
+ALTER TABLE `active_timer` ADD `countdown_ms` integer;

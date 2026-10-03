@@ -6,14 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TaskBadge } from '@/components/TaskBadge';
 import { TaskCard } from '@/components/TaskCard';
+import { TodaySummary } from '@/components/TodaySummary';
 import { useLive } from '@/db/live';
 import { getTask, reorderTasks } from '@/db/repos/tasks';
 import { getActiveTimer } from '@/db/repos/timers';
 import { useSettings } from '@/db/settings';
 import { formatDuration } from '@/domain/measure';
 import { moveItem } from '@/domain/order';
-import { elapsedMs } from '@/domain/timer';
-import { useTicker } from '@/features/counter/Stopwatch';
+import { countdownDisplay, elapsedMs } from '@/domain/timer';
+import { todaySummary } from '@/domain/today';
+import { formatCountdown, useTicker } from '@/features/counter/TimerPanel';
 import { listTaskViews, type TaskView } from '@/features/tasks/taskViews';
 import { useNow } from '@/lib/clock';
 import { useThemedStyles } from '@/lib/theme';
@@ -33,6 +35,7 @@ export default function HomeScreen() {
   const active = views.filter((v) => v.lifecycle === 'active');
   const finished = views.filter((v) => v.lifecycle === 'finished');
   const archived = views.filter((v) => v.lifecycle === 'archived');
+  const today = todaySummary(active);
 
   /** Moves one active task; only it gets a new sort order (domain/order.ts). */
   function move(index: number, direction: -1 | 1) {
@@ -53,6 +56,7 @@ export default function HomeScreen() {
       />
       <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 112 }]}>
         <TimerBanner />
+        {today && !reordering ? <TodaySummary summary={today} /> : null}
         {views.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🎯</Text>
@@ -160,7 +164,7 @@ function MoveButton(props: { symbol: string; label: string; disabled: boolean; o
   );
 }
 
-/** A running stopwatch stays visible from Home so it's never forgotten. */
+/** A running stopwatch or countdown stays visible from Home so it's never forgotten. */
 function TimerBanner() {
   const { t } = useTranslation();
   const styles = useThemedStyles(makeStyles);
@@ -169,7 +173,10 @@ function TimerBanner() {
   const running = timer?.runningSince != null;
   const nowMs = useTicker(running);
   if (!timer || !task) return null;
-  const time = formatDuration(Math.floor(elapsedMs(timer, nowMs) / 1000));
+  const countdown = countdownDisplay(timer, nowMs);
+  const time = countdown
+    ? formatCountdown(countdown)
+    : formatDuration(Math.floor(elapsedMs(timer, nowMs) / 1000));
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
@@ -177,7 +184,8 @@ function TimerBanner() {
       accessibilityRole="button"
     >
       <Text style={styles.timerText}>
-        {running ? '⏱' : '⏸'} {t('home.timerBanner', { name: task.name, time })}
+        {running ? (countdown ? '⏳' : '⏱') : '⏸'}{' '}
+        {t(countdown ? 'home.countdownBanner' : 'home.timerBanner', { name: task.name, time })}
       </Text>
     </Pressable>
   );

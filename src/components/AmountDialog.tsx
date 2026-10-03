@@ -11,7 +11,7 @@ import {
   type KeyboardTypeOptions,
 } from 'react-native';
 
-import { parseAmount } from '@/domain/input';
+import { parseAmount, type Result } from '@/domain/input';
 import type { Measure } from '@/domain/measure';
 import { formatError } from '@/i18n/format';
 import { useThemedStyles } from '@/lib/theme';
@@ -25,6 +25,11 @@ type Props = {
   measure: Measure;
   /** Pre-filled text when editing an entry. */
   initialText?: string;
+  /** Replace the amount hint and parsing, e.g. for a countdown length. */
+  hint?: string;
+  parse?: (text: string) => Result<number>;
+  /** Shows the ± button; false for values that can't be negative. */
+  signed?: boolean;
   submitLabel: string;
   color: string;
   /** Shows a note field (with quick chips) under the amount. */
@@ -45,6 +50,9 @@ export function AmountDialog({
   title,
   measure,
   initialText = '',
+  hint,
+  parse,
+  signed = true,
   submitLabel,
   color,
   note,
@@ -56,7 +64,7 @@ export function AmountDialog({
   const [text, setText] = useState(initialText);
   const [noteText, setNoteText] = useState(note?.initial ?? '');
   const [touched, setTouched] = useState(false);
-  const parsed = parseAmount(text, measure);
+  const parsed = parse ? parse(text) : parseAmount(text, measure);
   const isTime = measure === 'duration';
 
   function submit() {
@@ -77,16 +85,18 @@ export function AmountDialog({
       <View style={styles.dialog} pointerEvents="box-none">
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.hint}>{isTime ? t('amount.hintTime') : t('amount.hint')}</Text>
+          <Text style={styles.hint}>{hint ?? (isTime ? t('amount.hintTime') : t('amount.hint'))}</Text>
           <View style={styles.inputRow}>
-            <Pressable
-              onPress={toggleSign}
-              style={styles.signButton}
-              accessibilityRole="button"
-              accessibilityLabel={t('amount.toggleSign')}
-            >
-              <Text style={styles.signText}>±</Text>
-            </Pressable>
+            {signed ? (
+              <Pressable
+                onPress={toggleSign}
+                style={styles.signButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('amount.toggleSign')}
+              >
+                <Text style={styles.signText}>±</Text>
+              </Pressable>
+            ) : null}
             <TextInput
               value={text}
               onChangeText={setText}

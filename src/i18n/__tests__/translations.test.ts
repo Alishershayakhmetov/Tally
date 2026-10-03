@@ -48,6 +48,7 @@ describe('translations', () => {
     'stats.days',
     'stats.weeks',
     'stats.months',
+    'today.progress',
   ])('%s has every plural form each language needs', (key) => {
     expect(pluralForms(en as Tree, key)).toEqual(['one', 'other']);
     expect(pluralForms(ru as Tree, key)).toEqual(['few', 'many', 'one', 'other']);
@@ -100,6 +101,8 @@ describe('translations', () => {
       'weekdaysEmpty',
       'endBeforeStart',
       'dayStartInvalid',
+      'countdownInvalid',
+      'countdownTooLong',
     ];
     expect(Object.keys(en.errors).sort()).toEqual([...codes].sort());
   });

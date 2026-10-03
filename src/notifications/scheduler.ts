@@ -4,21 +4,29 @@ import { AppState, Platform } from 'react-native';
 
 import { subscribeDataChanges } from '@/db/live';
 import { dailySums } from '@/db/repos/entries';
-import { listTasks, type TaskWithTotal } from '@/db/repos/tasks';
+import { getTask, listTasks, type TaskWithTotal } from '@/db/repos/tasks';
+import { getActiveTimer } from '@/db/repos/timers';
 import { getSettings } from '@/db/settings';
 import { effectiveDayStart } from '@/domain/days';
-import { formatAmount } from '@/domain/measure';
+import { formatAmount, formatDuration } from '@/domain/measure';
 import { resolveWeekStart } from '@/domain/periods';
 import { planReminders, type PlannedReminder, type WallClock } from '@/domain/reminders';
+import { countdownEndsAt } from '@/domain/timer';
 import i18n from '@/i18n';
+import { getClockOffsetMs, now } from '@/lib/clock';
 import { localeFirstWeekday } from '@/lib/weekStart';
 
 // Reminders are re-planned from scratch after every data change and whenever
 // the app comes to the foreground: cancel what this app scheduled, then
-// schedule the next two weeks (SPEC §5). Planning uses the real clock, not the
-// dev offset, because the OS fires notifications on the real clock.
+// schedule the next two weeks (SPEC §5), plus a running countdown's "time's up"
+// alert. Planning uses the real clock, not the dev offset, because the OS fires
+// notifications on the real clock.
 
 const CHANNEL_ID = 'reminders';
+/** A separate channel, so reminders can be muted in system settings without muting countdowns. */
+const TIMER_CHANNEL_ID = 'timers';
+/** At most one countdown runs, so its alert has a fixed identifier. */
+const COUNTDOWN_ID = 'countdown';
 /** Android caps pending alarms per app at 500. */
 const MAX_SCHEDULED = 400;
 const REFRESH_DEBOUNCE_MS = 800;
@@ -39,6 +47,10 @@ async function ensureChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: i18n.t('reminder.channel'),
+    importance: Notifications.AndroidImportance.HIGH,
+  });
+  await Notifications.setNotificationChannelAsync(TIMER_CHANNEL_ID, {
+    name: i18n.t('countdown.channel'),
     importance: Notifications.AndroidImportance.HIGH,
   });
 }
@@ -118,6 +130,19 @@ async function replan(): Promise<void> {
   }
   planned.sort((a, b) => a.fireAt - b.fireAt);
 
+  const countdown = countdownAlert();
+  if (countdown) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: COUNTDOWN_ID,
+      content: countdown.content,
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: countdown.at,
+        channelId: TIMER_CHANNEL_ID,
+      },
+    });
+  }
+
   for (const plan of planned.slice(0, MAX_SCHEDULED)) {
     const task = tasks.get(plan.taskId)!;
     await Notifications.scheduleNotificationAsync({
@@ -135,8 +160,79 @@ async function replan(): Promise<void> {
   }
 }
 
-let timer: ReturnType<typeof setTimeout> | null = null;
+/** Notification work runs one job at a time, so a plan and an alert never interleave. */
 let queue: Promise<void> = Promise.resolve();
+
+// Countdown alert (Phase 6). The scheduled notification above covers a closed
+// app, but without the exact-alarm permission Android may deliver it minutes
+// late. While the app runs, a JS timer posts the alert right at 0:00 instead.
+
+type CountdownAlert = {
+  /** Real-clock epoch ms (the timer's timestamps include the dev clock offset). */
+  at: number;
+  content: Notifications.NotificationContentInput;
+};
+
+/** A countdown alert this late is skipped: the app was asleep, and the scheduled one covers it. */
+const RING_LATE_LIMIT_MS = 5_000;
+
+function countdownAlert(): CountdownAlert | null {
+  const active = getActiveTimer();
+  const endsAt = active ? countdownEndsAt(active, now()) : null;
+  const task = active && endsAt !== null ? getTask(active.taskId) : undefined;
+  if (!active?.countdownMs || endsAt === null || !task) return null;
+  return {
+    at: endsAt - getClockOffsetMs(),
+    content: {
+      title: task.emoji ? `${task.emoji} ${task.name}` : task.name,
+      body: i18n.t('countdown.doneBody', { time: formatDuration(Math.round(active.countdownMs / 1000)) }),
+      data: { taskId: task.id },
+    },
+  };
+}
+
+async function ring(alert: CountdownAlert): Promise<void> {
+  if (Date.now() - alert.at > RING_LATE_LIMIT_MS) return;
+  if (!(await Notifications.getPermissionsAsync()).granted) return;
+  const presented = await Notifications.getPresentedNotificationsAsync();
+  if (presented.some((n) => n.request.identifier === COUNTDOWN_ID)) return;
+  await Notifications.cancelScheduledNotificationAsync(COUNTDOWN_ID);
+  await ensureChannel();
+  await Notifications.scheduleNotificationAsync({
+    identifier: COUNTDOWN_ID,
+    content: alert.content,
+    trigger: Platform.OS === 'android' ? { channelId: TIMER_CHANNEL_ID } : null,
+  });
+}
+
+let alarm: ReturnType<typeof setTimeout> | null = null;
+let hadCountdown = false;
+
+/** Re-arms on every data change, so pausing, stopping or discarding cancels the alert. */
+function armCountdown(): void {
+  if (alarm) clearTimeout(alarm);
+  alarm = null;
+  const active = getActiveTimer();
+  if (active?.countdownMs != null) hadCountdown = true;
+  else if (hadCountdown) {
+    // The countdown was stopped or discarded: its "time's up" alert is stale.
+    hadCountdown = false;
+    void Notifications.dismissNotificationAsync(COUNTDOWN_ID).catch(() => {});
+  }
+  const alert = countdownAlert();
+  if (!alert) return;
+  alarm = setTimeout(
+    () => {
+      alarm = null;
+      queue = queue
+        .then(() => ring(alert))
+        .catch((error: unknown) => console.warn('Countdown alert failed', error));
+    },
+    Math.max(0, alert.at - Date.now()),
+  );
+}
+
+let timer: ReturnType<typeof setTimeout> | null = null;
 
 /** Debounced; runs are serialised so two plans never interleave. */
 export function refreshReminders(delayMs = REFRESH_DEBOUNCE_MS): void {
@@ -166,13 +262,22 @@ export function startReminders(openTask: (taskId: string) => void): () => void {
   };
   open(Notifications.getLastNotificationResponse());
   const responses = Notifications.addNotificationResponseReceivedListener(open);
-  const unsubscribe = subscribeDataChanges(() => refreshReminders());
-  const appState = AppState.addEventListener('change', (state) => state === 'active' && refreshReminders(0));
+  const unsubscribe = subscribeDataChanges(() => {
+    armCountdown();
+    refreshReminders();
+  });
+  const appState = AppState.addEventListener('change', (state) => {
+    if (state !== 'active') return;
+    armCountdown();
+    refreshReminders(0);
+  });
+  armCountdown();
   refreshReminders(0);
 
   return () => {
     responses.remove();
     unsubscribe();
     appState.remove();
+    if (alarm) clearTimeout(alarm);
   };
 }
