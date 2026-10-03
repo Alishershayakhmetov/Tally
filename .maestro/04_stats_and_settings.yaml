@@ -1,0 +1,44 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Statistics and settings
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Reading
+- tapOn: 'Add 5'
+- tapOn: 'Add 5'
+- assertVisible: 'Total 10'
+# The Undo bar covers the links at the bottom for 4 s after logging.
+- extendedWaitUntil:
+    notVisible: '.* logged'
+    timeout: 8000
+
+- tapOn: 'Statistics ›'
+- assertVisible: 'Best day'
+- assertVisible: 'Today: 10 pages'
+- tapOn: 'Weeks'
+- assertVisible: 'Last 12 weeks'
+- tapOn: 'Months'
+- assertVisible: 'Last 12 months'
+- back
+- back
+
+# Vibration is off until switched on.
+- tapOn: 'Settings'
+- assertVisible:
+    text: 'Vibration'
+    checked: false
+- tapOn:
+    text: 'Vibration'
+    checked: false
+- assertVisible:
+    text: 'Vibration'
+    checked: true
+
+# Russian and back.
+- tapOn: 'Русский'
+- assertVisible: 'Настройки'
+- tapOn: 'English'
+- assertVisible: 'Settings'

@@ -113,6 +113,7 @@ export function AmountDialog({
               onPress={submit}
               style={[styles.primary, { backgroundColor: color }]}
               accessibilityRole="button"
+              testID="amount-submit"
             >
               <Text style={styles.primaryText}>{submitLabel}</Text>
             </Pressable>

@@ -1,0 +1,26 @@
+// Gradle init script: fetch Google's Maven artifacts (AGP, AndroidX, R8) from
+// Google's alternate CDN instead of dl.google.com / maven.google.com. Same
+// artifacts, same publisher; useful on networks where dl.google.com is slow
+// (it ran at ~25 KB/s on the machine this app was built on, the CDN at ~500 KB/s).
+// Only used when scripts/e2e-android.mjs is run with E2E_GOOGLE_CDN=1.
+
+def cdn = 'https://redirector.gvt1.com/edgedl/dl/android/maven2/'
+
+def redirect = { RepositoryHandler repositories ->
+  repositories.withType(MavenArtifactRepository).configureEach { repo ->
+    def url = repo.url.toString()
+    if (url.startsWith('https://dl.google.com/dl/android/maven2') || url.startsWith('https://maven.google.com')) {
+      repo.url = cdn
+    }
+  }
+}
+
+beforeSettings { settings ->
+  redirect(settings.pluginManagement.repositories)
+  redirect(settings.dependencyResolutionManagement.repositories)
+}
+
+gradle.allprojects { project ->
+  redirect(project.buildscript.repositories)
+  redirect(project.repositories)
+}

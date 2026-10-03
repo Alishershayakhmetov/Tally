@@ -1,0 +1,32 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Template, counting, undo and a typed amount
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- assertVisible: 'No tasks yet'
+
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Water
+- assertVisible: 'of 8 · glasses'
+
+# Maestro waits for the screen to settle between taps, so these land more than
+# 2 s apart and stay separate entries; merging fast taps is covered by unit tests.
+- tapOn: 'Add 1'
+- tapOn: 'Add 1'
+- tapOn: 'Add 1'
+- assertVisible: 'Total 3'
+
+# A typed amount is always its own entry, so Undo removes exactly it.
+- tapOn: 'Enter amount…'
+- inputText: '5'
+- tapOn:
+    id: amount-submit
+- tapOn: 'UNDO'
+- assertVisible: 'Total 3'
+
+- back
+- assertVisible: 'Water, 3 / 8 · glasses.*'

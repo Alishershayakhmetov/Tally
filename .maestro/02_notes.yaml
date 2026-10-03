@@ -1,0 +1,34 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Notes on entries
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Push-ups
+
+# Right after logging: the Undo bar offers ADD NOTE, with quick chips.
+- tapOn: 'Add 10'
+- tapOn: 'ADD NOTE'
+- assertVisible: 'Add a note'
+- tapOn: 'New record'
+- tapOn: 'Save'
+- assertVisible: '“New record”'
+
+# History shows it and edits amount and note together.
+- tapOn: 'All history ›'
+- assertVisible: '“New record”'
+- tapOn: '“New record”'
+- assertVisible: 'Edit entry'
+- tapOn: 'Felt great'
+- tapOn: 'Save'
+- assertVisible: '“Felt great”'
+- assertNotVisible: '“New record”'
+
+# Back on the counter, tapping the entry edits or removes its note.
+- back
+- tapOn: '“Felt great”'
+- assertVisible: 'Edit note'
+- tapOn: 'Remove'
+- assertNotVisible: '“Felt great”'

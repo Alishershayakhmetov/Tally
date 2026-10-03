@@ -134,7 +134,6 @@ export function TaskForm({
           onChangeText={(text) => set('name', text)}
           placeholder={t('form.namePlaceholder')}
           placeholderTextColor={colors.textMuted}
-          autoFocus={!initial.name}
           maxLength={60}
           style={styles.input}
           accessibilityLabel={t('form.name')}

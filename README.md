@@ -101,8 +101,49 @@ npx expo start --tunnel
 | `npm run lint`        | ESLint (Expo config + Prettier)                           |
 | `npm run format`      | Format with Prettier                                      |
 | `npm run db:generate` | Generate a SQL migration after editing `src/db/schema.ts` |
+| `npm run e2e:build`   | Build a release APK and install it on the emulator        |
+| `npm run e2e`         | Run the Maestro end-to-end flows in `.maestro/`           |
 
 CI (`.github/workflows/ci.yml`) runs typecheck, lint, format check and tests. It also fails if the schema changed without a migration, and it bundles the app for Android.
+
+## End-to-end tests (Maestro)
+
+The flows in `.maestro/` drive the real release APK on an Android emulator:
+
+| Flow                         | What it checks                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| `01_count_and_undo.yaml`     | Create a task from a template, +1 taps, a typed amount and its Undo, Home's progress              |
+| `02_notes.yaml`              | ADD NOTE from the Undo bar, chips, the note in History, editing it there, removing it             |
+| `03_reorder.yaml`            | New tasks go last, Move up, and the order survives closing the app                                |
+| `04_stats_and_settings.yaml` | Statistics tiles and ranges, the Vibration switch (off by default), switching to Russian and back |
+
+Each flow starts from cleared app data, so they can run in any order. Shared steps live in `.maestro/subflows/`. Flows use English text and the screen-reader labels the app already has (`Add 10`, `Move Push-ups up`), plus a `testID` where text is ambiguous.
+
+**One-time setup** (Windows paths shown):
+
+1. Android Studio's SDK, plus these SDK packages: `platforms/android-36`, `ndk/27.1.12297006`, `cmake/3.22.1`, `system-images/android-36/google_apis/x86_64`. Use Android Studio's SDK Manager, or `cmdline-tools\latest\bin\sdkmanager.bat`.
+2. An emulator: `avdmanager create avd -n tally_e2e -k "system-images;android-36;google_apis;x86_64" -d pixel_7`.
+3. [Maestro CLI](https://docs.maestro.dev): unzip a release into `%USERPROFILE%\.maestro` and add `%USERPROFILE%\.maestro\maestro\bin` to `PATH`. It needs Java 17 or newer.
+
+**Run:**
+
+```bash
+"%LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe" -avd tally_e2e -gpu host
+```
+
+Use the GPU (`-gpu host`). With software rendering (`swiftshader`), the emulator lost its adb connection between flows ("device offline").
+
+```bash
+npm run e2e:build
+```
+
+```bash
+npm run e2e
+```
+
+`e2e:build` generates `android/` (gitignored) with `expo prebuild` if it's missing, builds `assembleRelease`, and installs the APK with `adb`. Add `--clean` after `app.json` or plugin changes. The first build takes a while because Gradle downloads its dependencies; later builds are incremental.
+
+If downloads from `dl.google.com` are slow on your network, set `E2E_GOOGLE_CDN=1`. Gradle then fetches Google's Maven artifacts through Google's alternate CDN (`scripts/google-cdn.init.gradle`): same artifacts and publisher, different host.
 
 ## How it works
 

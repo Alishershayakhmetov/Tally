@@ -23,6 +23,7 @@ export function TemplatePicker({ selected, onSelect }: Props) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        testID="template-picker"
         contentContainerStyle={styles.row}
         accessibilityRole="radiogroup"
         accessibilityLabel={t('templates.title')}

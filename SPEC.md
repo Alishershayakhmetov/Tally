@@ -386,10 +386,23 @@ Each phase ends with verification **on the real Android phone**, not just "it co
 - **Done when:** unit tests cover note normalisation and suggestions, every move case (edges, gaps, ties, 200 halvings of one gap), and that every template fills a valid form in both languages. The SQL tests run migration 0003 and import a note.
   - On the phone: reorder survives a restart, a template creates a working task, and a note added from the Undo bar shows in History.
 
+### End-to-end tests (Maestro), added 2026-10-02
+- Four Maestro flows in `.maestro/` drive the **release APK** on a local Android emulator (`tally_e2e`, Android 36, x86_64). They cover templates, counting, Undo, typed amounts, notes, reorder (including surviving a restart), statistics and settings. Each flow clears app data first, so they're independent.
+- `npm run e2e:build` (`scripts/e2e-android.mjs`) does three things:
+  - Runs `expo prebuild` if `android/` is missing (it's gitignored, and `package.json` is restored afterwards).
+  - Builds `assembleRelease` for the connected device's ABI only: about 1 min incrementally, versus 12 min for all four ABIs.
+  - Installs the APK with adb.
+- `E2E_GOOGLE_CDN=1` routes Google's Maven through Google's alternate CDN. On the development machine, `dl.google.com` ran at ~25 KB/s and the CDN at ~500 KB/s.
+- **Decisions found while running them:**
+  - Maestro waits for the UI to settle between commands, so taps land more than 2 s apart and don't merge. Merging is left to the unit tests, and Undo is tested on a typed amount, which never merges.
+  - The Undo bar covers the bottom links for 4 s, so flows wait for it before tapping them.
+  - The New task form no longer focuses the Name field on open. With templates above the form, an immediate keyboard covered half the screen, and Maestro's `hideKeyboard` acted as Back when no keyboard was up.
+  - The emulator must use the GPU (`-gpu host`). With software rendering, adb lost the device between flows ("device offline").
+- Not in CI: GitHub's runners would need an emulator. An EAS Workflow with a `maestro` job is the cloud option if wanted.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
-| End-to-end tests (Maestro) | Deferred at the user's request (2026-10-01). Plan: flows in `.maestro/` and an EAS workflow that builds a test APK and runs them on Expo's Android emulator (this PC has no Android SDK). |
 | Cloud sync + accounts | Needs a backend choice. The v1 schema is designed for it (§6.3). |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
 | Home-screen widget | Needs native code / a dev build. Nice for a portfolio later. |

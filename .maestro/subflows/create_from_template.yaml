@@ -1,0 +1,20 @@
+# Creates a task from a built-in template and lands on its counter screen.
+# TEMPLATE is the template's English name ("Water", "Reading", ...).
+appId: com.alishershayakhmetov.taskcounter
+---
+- tapOn: 'New task'
+# Later templates sit off-screen to the right of the row.
+- repeat:
+    times: 4
+    while:
+      notVisible: '${TEMPLATE}, .*'
+    commands:
+      - swipe:
+          from:
+            id: template-picker
+          direction: LEFT
+- tapOn: '${TEMPLATE}, .*'
+- scrollUntilVisible:
+    element: 'Create task'
+- tapOn: 'Create task'
+- assertVisible: 'Enter amount…'

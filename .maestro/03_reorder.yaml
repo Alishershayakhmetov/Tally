@@ -1,0 +1,34 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Reorder tasks, and the order survives a restart
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Water
+- back
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Push-ups
+- back
+
+# New tasks go to the end.
+- assertVisible:
+    text: 'Push-ups, .*'
+    below: 'Water, .*'
+
+- tapOn: 'Reorder'
+- assertVisible: 'Use the arrows to change the order.'
+- tapOn: 'Move Push-ups up'
+- tapOn: 'Done'
+- assertVisible:
+    text: 'Water, .*'
+    below: 'Push-ups, .*'
+
+- stopApp
+- launchApp
+- assertVisible:
+    text: 'Water, .*'
+    below: 'Push-ups, .*'

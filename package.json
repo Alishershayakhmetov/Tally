@@ -62,7 +62,9 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "e2e:build": "node scripts/e2e-android.mjs",
+    "e2e": "maestro test .maestro"
   },
   "private": true,
   "jest": {
