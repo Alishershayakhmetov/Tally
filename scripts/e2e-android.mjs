@@ -54,7 +54,10 @@ try {
 } catch {
   // No device: build every ABI.
 }
-const gradleArgs = ['assembleRelease', '--console=plain'];
+// The JS bundle is always rebuilt: React Native's Gradle plugin only watches
+// .js/.ts files outside android/ and ios/ folders, so edits to translations
+// (.json), migrations (.sql) or such folders would otherwise ship stale code.
+const gradleArgs = [':app:createBundleReleaseJsAndAssets', '--rerun', 'assembleRelease', '--console=plain'];
 if (/^[\w-]+$/.test(abi)) gradleArgs.push(`-PreactNativeArchitectures=${abi}`);
 if (process.env.E2E_GOOGLE_CDN === '1') {
   gradleArgs.push('--init-script', join(root, 'scripts', 'google-cdn.init.gradle'));

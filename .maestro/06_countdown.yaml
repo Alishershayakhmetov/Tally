@@ -1,0 +1,30 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Countdown runs into overtime and logs the whole time
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Plank
+
+# It starts at what's left today (5:00); a short length keeps the flow quick.
+- tapOn: 'Countdown'
+- tapOn: 'Countdown length 5:00'
+- eraseText: 10
+- inputText: '0:05'
+- tapOn:
+    id: amount-submit
+- assertVisible: 'Countdown length 0:05'
+- tapOn: '.*Start countdown'
+- assertVisible: 'Countdown · 0:05'
+
+# At 0:00 it keeps counting as overtime instead of stopping.
+- extendedWaitUntil:
+    visible: '✓ 0:05 done · overtime'
+    timeout: 20000
+- tapOn: 'Stop and log'
+- assertVisible: '\+0:\d\d logged'

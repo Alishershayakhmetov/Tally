@@ -79,6 +79,7 @@ function TapCounter({ view }: { view: TaskView }) {
         accessibilityRole="button"
         accessibilityLabel={t('counter.add', { count: 1 })}
         accessibilityHint={t('tap.areaHint', { n: set })}
+        testID="tap-area"
       >
         <Text style={[styles.name, { color: ink }]} numberOfLines={1}>
           {task.emoji ? `${task.emoji} ${task.name}` : task.name}

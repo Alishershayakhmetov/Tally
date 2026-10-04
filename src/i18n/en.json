@@ -163,7 +163,7 @@
     "discardTitle": "Discard this timer?",
     "discardBody": "The time won’t be logged.",
     "otherTimer": "A timer is running for “{{name}}”.",
-    "timerTag": "stopwatch",
+    "timerTag": "timer",
     "timerLabel": "Stopwatch"
   },
   "countdown": {

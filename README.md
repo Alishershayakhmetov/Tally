@@ -128,6 +128,8 @@ The flows in `.maestro/` drive the real release APK on an Android emulator:
 | `02_notes.yaml`              | ADD NOTE from the Undo bar, chips, the note in History, editing it there, removing it             |
 | `03_reorder.yaml`            | New tasks go last, Move up, and the order survives closing the app                                |
 | `04_stats_and_settings.yaml` | Statistics tiles and ranges, the Vibration switch (off by default), switching to Russian and back |
+| `05_tap_mode_and_today.yaml` | Tap mode's +1 area and −1, then Home's Today summary as a daily goal is met                       |
+| `06_countdown.yaml`          | A typed countdown length, 0:00 turning into overtime, and Stop logging the whole time             |
 
 Each flow starts from cleared app data, so they can run in any order. Shared steps live in `.maestro/subflows/`. Flows use English text and the screen-reader labels the app already has (`Add 10`, `Move Push-ups up`), plus a `testID` where text is ambiguous.
 

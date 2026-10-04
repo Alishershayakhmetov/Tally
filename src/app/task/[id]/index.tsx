@@ -153,7 +153,12 @@ function Counter({ view }: { view: TaskView }) {
           ),
         }}
       />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}>
+      {/* "handled": the countdown-length dialog renders inside this list, and with the default the
+          first tap on its button would only close the keyboard. */}
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {lifecycle === 'finished' && task.endDate ? (
           <View style={styles.bannerRow}>
             <Text style={[styles.banner, styles.bannerText]}>

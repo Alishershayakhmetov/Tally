@@ -387,7 +387,7 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - On the phone: reorder survives a restart, a template creates a working task, and a note added from the Undo bar shows in History.
 
 ### End-to-end tests (Maestro), added 2026-10-02
-- Four Maestro flows in `.maestro/` drive the **release APK** on a local Android emulator (`tally_e2e`, Android 36, x86_64). They cover templates, counting, Undo, typed amounts, notes, reorder (including surviving a restart), statistics and settings. Each flow clears app data first, so they're independent.
+- Maestro flows in `.maestro/` drive the **release APK** on a local Android emulator (`tally_e2e`, Android 36, x86_64). They cover templates, counting, Undo, typed amounts, notes, reorder (including surviving a restart), statistics and settings, and since Phase 6 tap mode, the Today summary and the countdown. Each flow clears app data first, so they're independent.
 - `npm run e2e:build` (`scripts/e2e-android.mjs`) does three things:
   - Runs `expo prebuild` if `android/` is missing (it's gitignored, and `package.json` is restored afterwards).
   - Builds `assembleRelease` for the connected device's ABI only: about 1 min incrementally, versus 12 min for all four ABIs.
@@ -426,7 +426,13 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - Everything is copied (name, icon, colour, goal, buttons, weekdays, cutoff, reminder). The end date keeps the original length: a 30-day challenge again runs 30 days from today.
   - The finished task stays under Finished with its history.
 - **Done when:** unit tests cover the countdown (time left rounding, overtime, pauses moving the end, the default length, ± steps and typed lengths), the Today summary (which goals count, the minimum of 2), the restart end date (month and leap-year ends), the new plural key, and migration 0004.
-  - **Status:** unit tests, typecheck and lint pass. Not yet run on the emulator or a phone (no native build was made for this phase), so the alert timing, tap-mode feel and layouts are unverified.
+  - **Checked on the emulator (2026-10-03):** Maestro flows 05 (tap mode, Today summary) and 06 (countdown into overtime), plus by hand:
+    - The 0:00 alert posted within about 0.1 s with the app open, and about 1.1 s late from the scheduled notification with the app in the background.
+    - Stopping dismisses the alert.
+    - "Do it again" was checked by moving the emulator's date past a 30-day challenge: the copy ran Nov 3 to Dec 2.
+  - **Found on the device:**
+    - The countdown-length dialog renders inside the counter screen's ScrollView. With the default `keyboardShouldPersistTaps`, the first tap on Set only closed the text keyboard (time entry uses the full keyboard), so the screen's ScrollView now uses `"handled"`.
+    - Entries logged by either timer mode are tagged "timer" rather than "stopwatch".
 
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |

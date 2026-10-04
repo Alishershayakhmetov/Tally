@@ -1,0 +1,42 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Tap mode and the Today summary
+---
+- launchApp:
+    clearState: true
+
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Water
+- back
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Push-ups
+
+# The whole coloured area adds 1; −1 fixes a stray tap.
+- tapOn: 'Tap mode'
+- assertVisible: 'Tap anywhere to add 1'
+- tapOn:
+    id: tap-area
+- tapOn:
+    id: tap-area
+- tapOn:
+    id: tap-area
+- assertVisible: 'Today: 3 / 100 · reps'
+- assertNotVisible: 'Tap anywhere to add 1'
+- tapOn: 'Subtract 1'
+- assertVisible: 'Today: 2 / 100 · reps'
+- tapOn: 'Done'
+- assertVisible: 'Total 2'
+
+# Two daily goals, so Home shows the Today summary; meeting one moves it.
+- back
+- assertVisible: '0 of 2 daily goals done'
+- tapOn: 'Water, .*'
+- tapOn: 'Enter amount…'
+- inputText: '8'
+- tapOn:
+    id: amount-submit
+- back
+- assertVisible: '1 of 2 daily goals done'

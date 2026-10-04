@@ -191,7 +191,7 @@
     "discardTitle": "Сбросить секундомер?",
     "discardBody": "Время не будет записано.",
     "otherTimer": "Таймер уже идёт для «{{name}}».",
-    "timerTag": "секундомер",
+    "timerTag": "таймер",
     "timerLabel": "Секундомер"
   },
   "countdown": {
