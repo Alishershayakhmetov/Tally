@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phases 0–6
+## Status: Phases 0–7
 
 **Counting (Phase 0)**
 
@@ -68,6 +68,12 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
   - Fast taps merge into one entry, like the buttons. A −1 button fixes a stray tap.
 - **Today summary** on Home: "3 of 5 daily goals done", with one segment per goal, filled in its colour once met. It counts daily goals that have a quota today, and appears once there are two or more.
 - **Do it again** on a finished challenge opens New task with the same settings, starting today and lasting as long as the first run. The finished one stays under Finished.
+
+**Home-screen widgets (Phase 7)** for Android and iOS. The Android widget is tested on the emulator; the iOS one isn't built yet (see Known limitations).
+
+- The widget shows the **first active tasks on Home**: 1 on a small widget, up to 3 on a larger one. Reorder Home to choose them. Each row has the task's progress for today (or this week, month, or in total) and a **+** button that adds the task's smallest button (+1, +5, +1 min). Tapping a row opens that task.
+- **Android** (`react-native-android-widget`): + is logged straight into the database, even with the app closed, and presses within 2 s merge into one entry like counter taps. The widget redraws after every change in the app and every 30 minutes, and follows the system's light/dark mode.
+- **iOS** (`expo-widgets`, iOS 17+ for the + button): the widget runs apart from the app and can't reach the database. A press is kept in the widget, which shows it right away; the app logs kept presses with their original times the next time it runs. The app gives the widget snapshots for the next few day boundaries, so "today" resets on time.
 
 ## Build an installable APK
 
@@ -172,6 +178,9 @@ src/
   lib/          clock (with dev offset), theme hooks, contrast, week start, haptics
   notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts, and the countdown alert
   components/   shared UI: cards, dialogs, calendar, segmented control, steppers
+  widgets/      home-screen widgets: AndroidWidget + androidTaskHandler (react-native-android-widget),
+                IosWidget (expo-widgets), and index.android.ts / index.ios.ts keeping them in step
+index.ts        app entry: Expo Router's entry plus the Android widget's background handler
 drizzle/        generated SQL migrations, bundled into the app
 assets/         icon.svg (the icon master) and the PNGs exported from it: launcher, adaptive
                 foreground and monochrome, notification, splash, favicon
@@ -191,3 +200,7 @@ assets/         icon.svg (the icon master) and the PNGs exported from it: launch
 - **Reminders** don't exist on web. On Android they use inexact alarms, so they can arrive a few minutes late (exact alarms need a special permission that Android 14 denies by default). They're planned two weeks ahead, so if the app isn't opened for two weeks, they stop until it is.
 - **The countdown's 0:00 alert** has the same limit when Tally is closed or the phone is locked: it can arrive late. While the app is open (the counter screen keeps the screen on while a timer runs), the app posts the alert itself, on time.
 - Header actions ("Settings", "Edit") are text buttons; no icon set is installed.
+- **Widgets** need a native build: Expo Go has neither widget module, so there the app runs without them.
+  - **Android:** tested on the emulator (see SPEC Phase 7), not yet on a phone. The widget picker shows its English label and the app icon instead of a preview image.
+  - **iOS:** can't be built on Windows. It needs a Mac, or an EAS iOS build with an Apple Developer account: the widget shares data through an App Group (`group.com.alishershayakhmetov.taskcounter`), which needs provisioning.
+  - **iOS presses** are logged only when the app next runs, so reminders don't know about them until then. A press made in the few milliseconds while the app replaces the widget's timeline is lost.

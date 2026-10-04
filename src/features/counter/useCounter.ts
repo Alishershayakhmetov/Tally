@@ -3,20 +3,14 @@ import { useRef, useState } from 'react';
 import { addEntry, extendEntry, softDeleteEntry } from '@/db/repos/entries';
 import type { TaskWithTotal } from '@/db/repos/tasks';
 import type { EntrySource } from '@/db/schema';
-import { getGlobalDayStartMin } from '@/db/settings';
-import { deviceUtcOffsetMin, effectiveDayStart, logicalDate } from '@/domain/days';
 import { nextBurst, planTap, type Burst } from '@/domain/entries';
 import { crossedTarget } from '@/domain/progress';
 import { now } from '@/lib/clock';
 import { goalReachedFeedback, tapFeedback } from '@/lib/haptics';
 
-export type LastChange = { entryId: string; amount: number };
+import { entryStamp } from './stamp';
 
-function stamp(task: TaskWithTotal, at: number) {
-  const utcOffsetMin = deviceUtcOffsetMin(new Date(at));
-  const dayStart = effectiveDayStart(task.dayStartMin, getGlobalDayStartMin());
-  return { occurredAt: at, utcOffsetMin, localDate: logicalDate(at, utcOffsetMin, dayStart) };
-}
+export type LastChange = { entryId: string; amount: number };
 
 /** `windowTotal` is what the screen shows: today's/this week's total, or the all-time total. */
 export function useCounter(task: TaskWithTotal, windowTotal: number) {
@@ -29,12 +23,12 @@ export function useCounter(task: TaskWithTotal, windowTotal: number) {
   }
 
   function insert(amount: number, source: EntrySource, at: number, note: string | null = null): string {
-    return addEntry({ taskId: task.id, amount, source, note, ...stamp(task, at) }, at);
+    return addEntry({ taskId: task.id, amount, source, note, ...entryStamp(task.dayStartMin, at) }, at);
   }
 
   function logButton(delta: number) {
     const at = now();
-    const { localDate } = stamp(task, at);
+    const { localDate } = entryStamp(task.dayStartMin, at);
     const plan = planTap(burst.current, delta, at, localDate);
     let entryId: string;
     let amount: number;

@@ -409,5 +409,9 @@
   "restart": {
     "action": "Do it again",
     "note": "A fresh copy of “{{name}}” that starts today and runs as long as the first one. The finished one stays under Finished."
+  },
+  "widget": {
+    "add": "Add {{amount}} to {{name}}",
+    "empty": "No active tasks. Tap to open Tally."
   }
 }

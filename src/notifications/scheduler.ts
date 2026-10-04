@@ -244,6 +244,13 @@ export function refreshReminders(delayMs = REFRESH_DEBOUNCE_MS): void {
   }, delayMs);
 }
 
+/** Re-plans right away and resolves when done, for code that runs while the app may be closed (the widget). */
+export function refreshRemindersNow(): Promise<void> {
+  if (!remindersSupported) return Promise.resolve();
+  queue = queue.then(replan).catch((error: unknown) => console.warn('Reminder planning failed', error));
+  return queue;
+}
+
 /** Call once the database is open. Returns a cleanup function. */
 export function startReminders(openTask: (taskId: string) => void): () => void {
   if (!remindersSupported) return () => {};

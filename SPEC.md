@@ -434,12 +434,44 @@ Each phase ends with verification **on the real Android phone**, not just "it co
     - The countdown-length dialog renders inside the counter screen's ScrollView. With the default `keyboardShouldPersistTaps`, the first tap on Set only closed the text keyboard (time entry uses the full keyboard), so the screen's ScrollView now uses `"handled"`.
     - Entries logged by either timer mode are tagged "timer" rather than "stopwatch".
 
+### Phase 7: home-screen widgets, added 2026-10-03
+- **One widget, "Tally", on both platforms**, showing the **first active tasks on Home** (`domain/widget.ts`): 1 row on a small widget, up to 3 on a larger one. Reordering Home chooses them, so there's no per-widget setup. Neither platform could offer the same per-widget task picker: iOS widget options are fixed when the app is built.
+  - Each row: icon and name, "60 / 100 pages · today" (✓ once met; "Rest day" on a rest day), a progress bar in the task's colour, and a **+** button.
+  - **+ adds the task's smallest + button**: +1 for most templates, +5 for squats, +1 min for time goals. A task with only − buttons has no +.
+  - Tapping a row opens its task (`taskcounter://task/<id>`). With no active tasks the widget says so, and tapping it opens the app.
+  - Rows are built as plain data in `features/widget/snapshot.ts`, translated and with numbers ready to show, because the iOS widget can't run the app's code.
+- **Android** (`react-native-android-widget` 0.22):
+  - **Drawing:** its own primitives, with light and dark variants. The row count follows the widget's height (56 dp per row).
+  - **Updates:** a headless task handler (`widgets/androidTaskHandler.tsx`) runs when a widget is added, resized, refreshed (`updatePeriodMillis`, every 30 min, which also covers day rollover) or tapped. It opens the database and sets the language itself, since the app may be closed.
+  - **+** is logged right away with the counter's merge rule (presses within 2 s, same day, one entry), then the handler re-plans reminders, because a met quota skips today's reminder. While the app runs, every data change redraws placed widgets.
+  - **Loading:** the library throws on import without its native module (Expo Go), so `widgets/index.android.ts` only requires it once `TurboModuleRegistry` has the module. The app entry is now `index.ts`, which loads Expo Router's entry and registers the handler.
+- **iOS** (`expo-widgets`, SwiftUI through `@expo/ui`; small and medium sizes):
+  - **Runtime:** the widget is a `'widget'`-directive function that Babel compiles to a string. It runs in the widget extension with only SwiftUI components, modifiers and plain JavaScript, so formatting is inlined there.
+  - **Data:** the app pushes a **timeline**: snapshots for now and the next three day boundaries (the earliest cutoff among the shown tasks), so "today" resets without the app running.
+  - **+** (iOS 17+): a press returns new widget props with the press appended (`{ taskId, at, amount }`). The runtime keeps them and redraws with no app process, and the widget adds pending presses made since each row's period start.
+  - **When the app runs** (start, foreground, any data change, or a widget-interaction event while it's alive), it reads every timeline entry's presses, logs the new ones grouped by the counter's merge rule at their original times, then replaces the timeline with no pending presses.
+  - **Accepted:** a press made between that read and the replace is lost (a few ms); reminders don't see presses until the app runs.
+  - **App config:** `ios.bundleIdentifier` is now `com.alishershayakhmetov.taskcounter`, which expo-widgets needs for the widget target and its App Group.
+- Widget presses are stored as `button` entries, so backups need no new source value.
+- `expo-widgets` also has an undocumented `enableAndroid` option, not used: the SDK 57 docs list iOS only.
+- **Done when:** unit tests cover the + step, which tasks show, rows per height, and grouping kept presses (merge window, interleaved tasks, the day boundary, time amounts, malformed presses).
+  - Checked without a device: typecheck, lint, the app config evaluating with both plugins, and the iOS widget compiling to a string that uses only names its runtime provides.
+  - **Android, checked on the emulator (2026-10-03):**
+    - Added from the launcher's widget picker. It shows the first three Home tasks, in light and dark mode.
+    - With the app process killed, three quick presses logged one merged +3 entry and redrew the widget, and +1 min on a time goal logged 60 s.
+    - A change in the app redraws the widget, and tapping a row opens its task.
+  - **iOS:** not built: it needs a Mac, or an EAS iOS build with an Apple Developer account.
+  - **Found on the device:**
+    - `expo-widgets` is also autolinked on Android, and its Glance dependency brought `work-runtime-ktx` 2.7.1, which clashed with `work-runtime` 2.8.1 (duplicate classes). The app uses `expo-widgets` only on iOS (on Android its JS is a stub), so `package.json` excludes it from Android autolinking (`expo.autolinking.android.exclude`).
+    - React Compiler rewrote the Android widget component and added a hook. The library calls components as plain functions, so the render failed with "Invalid Hook Call", and the widget file now opts out with `'use no memo'`.
+    - React Native's Gradle plugin ignores folders named `android/` or `ios/` when deciding whether to rebuild the JS bundle, so edits to the widget files at first shipped stale code. The widget files now live directly in `src/widgets/` (`AndroidWidget.tsx`, `androidTaskHandler.tsx`, `IosWidget.tsx`).
+    - A widget row's deep link on a cold start opened the task with nothing underneath, so Back left the app. The root layout now sets `unstable_settings.anchor = 'index'`, so Home is always below.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
 | Cloud sync + accounts | Needs a backend choice. The v1 schema is designed for it (§6.3). |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
-| Home-screen widget | Needs native code / a dev build. Nice for a portfolio later. |
 | iOS build, Play Store release | Not needed for a portfolio. Needs developer accounts. |
 | Multiple simultaneous timers | Edge case. One timer covers realistic use. |
 

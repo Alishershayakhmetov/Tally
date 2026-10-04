@@ -1,9 +1,9 @@
 {
   "name": "task_counter_app",
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "version": "1.0.0",
   "dependencies": {
-    "@expo/ui": "~57.0.20",
+    "@expo/ui": "~57.0.21",
     "drizzle-orm": "^0.45.3",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",
@@ -23,12 +23,14 @@
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
+    "expo-widgets": "~57.0.22",
     "i18next": "^26.4.2",
     "intl-pluralrules": "^2.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-i18next": "^17.0.15",
     "react-native": "0.86.3",
+    "react-native-android-widget": "^0.22.1",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
@@ -71,6 +73,15 @@
     "preset": "jest-expo",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-widgets"
+        ]
+      }
     }
   }
 }

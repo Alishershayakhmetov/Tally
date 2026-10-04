@@ -9,9 +9,14 @@ import { getSettings, useSettings } from '@/db/settings';
 import i18n, { resolveLanguage } from '@/i18n';
 import { useColors } from '@/lib/theme';
 import { startReminders } from '@/notifications/scheduler';
+import { startWidgets } from '@/widgets';
 import { lightColors, spacing } from '@/theme';
 
 type DbState = { status: 'opening' } | { status: 'ready' } | { status: 'failed'; message: string };
+
+// A deep link (a widget row opens taskcounter://task/<id>) still gets Home
+// underneath, so Back returns to the list instead of leaving the app.
+export const unstable_settings = { anchor: 'index' };
 
 export default function RootLayout() {
   const [db, setDb] = useState<DbState>({ status: 'opening' });
@@ -62,6 +67,9 @@ function AppShell() {
       ),
     [],
   );
+
+  // Home-screen widgets follow every data change (and, on iOS, hand over their presses).
+  useEffect(() => startWidgets(), []);
 
   const navigationTheme = useMemo(() => {
     const base = colors.scheme === 'dark' ? DarkTheme : DefaultTheme;

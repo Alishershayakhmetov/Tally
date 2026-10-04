@@ -7,6 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "taskcounter",
     "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.alishershayakhmetov.taskcounter"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#2563EB",
@@ -52,7 +55,40 @@
           "color": "#2563EB"
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "TallyWidget",
+              "label": "Tally",
+              "description": "Your first tasks on Home, with a + button",
+              "minWidth": "180dp",
+              "minHeight": "72dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "TallyWidget",
+              "displayName": "Tally",
+              "description": "Your first tasks on Home, with a + button",
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"]
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
