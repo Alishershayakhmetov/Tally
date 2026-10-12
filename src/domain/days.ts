@@ -30,6 +30,16 @@ export function currentLogicalDate(now: Date, dayStartMin: number): string {
   return logicalDate(now.getTime(), deviceUtcOffsetMin(now), dayStartMin);
 }
 
+/** "2026-10-12T15:00:00+05:00": the wall clock at that UTC offset, with the offset written out. */
+export function formatIsoWithOffset(epochMs: number, utcOffsetMin: number): string {
+  const wall = new Date(epochMs + utcOffsetMin * 60_000).toISOString().slice(0, 19);
+  const abs = Math.abs(utcOffsetMin);
+  const sign = utcOffsetMin < 0 ? '-' : '+';
+  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
+  const mm = String(abs % 60).padStart(2, '0');
+  return `${wall}${sign}${hh}:${mm}`;
+}
+
 export function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

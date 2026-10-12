@@ -10,6 +10,8 @@ type Props<T> = {
   value: T;
   onChange: (value: T) => void;
   accessibilityLabel: string;
+  /** Options stacked one under another, for labels too long to share a row on a phone. */
+  vertical?: boolean;
 };
 
 export function Segmented<T extends string | number>({
@@ -17,17 +19,22 @@ export function Segmented<T extends string | number>({
   value,
   onChange,
   accessibilityLabel,
+  vertical = false,
 }: Props<T>) {
   const styles = useThemedStyles(makeStyles);
   return (
-    <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
+    <View
+      style={[styles.row, vertical && styles.column]}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={accessibilityLabel}
+    >
       {options.map((option) => {
         const selected = option.value === value;
         return (
           <Pressable
             key={String(option.value)}
             onPress={() => onChange(option.value)}
-            style={[styles.option, selected && styles.selected]}
+            style={[styles.option, vertical && styles.stacked, selected && styles.selected]}
             accessibilityRole="radio"
             aria-checked={selected}
           >
@@ -50,6 +57,9 @@ function makeStyles(c: Colors) {
       padding: 3,
       gap: 3,
     },
+    column: {
+      flexDirection: 'column',
+    },
     option: {
       flex: 1,
       minWidth: 0,
@@ -57,6 +67,11 @@ function makeStyles(c: Colors) {
       paddingHorizontal: spacing.xs,
       borderRadius: radius.sm,
       alignItems: 'center',
+    },
+    stacked: {
+      flex: 0,
+      minHeight: 44,
+      justifyContent: 'center',
     },
     selected: {
       backgroundColor: c.surface,

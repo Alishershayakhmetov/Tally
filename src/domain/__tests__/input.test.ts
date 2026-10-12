@@ -82,6 +82,7 @@ describe('validateTaskForm', () => {
     measure: 'count',
     unitLabel: ' push-ups ',
     target: '1000',
+    targetUnit: 'format',
     increments: '-1, 1, 5, 10',
     recurrence: 'none',
     weekdayMask: 127,

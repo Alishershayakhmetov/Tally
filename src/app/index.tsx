@@ -1,10 +1,11 @@
 import { router, Stack } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Sortable from 'react-native-sortables';
 
-import { TaskBadge } from '@/components/TaskBadge';
 import { TaskCard } from '@/components/TaskCard';
 import { TodaySummary } from '@/components/TodaySummary';
 import { useLive } from '@/db/live';
@@ -12,7 +13,7 @@ import { getTask, reorderTasks } from '@/db/repos/tasks';
 import { getActiveTimer } from '@/db/repos/timers';
 import { useSettings } from '@/db/settings';
 import { formatDuration } from '@/domain/measure';
-import { moveItem } from '@/domain/order';
+import { moveItem, moveTo } from '@/domain/order';
 import { countdownDisplay, elapsedMs } from '@/domain/timer';
 import { todaySummary } from '@/domain/today';
 import { formatCountdown, useTicker } from '@/features/counter/TimerPanel';
@@ -30,18 +31,13 @@ export default function HomeScreen() {
   const weekStart = useWeekStart();
   const nowMs = useNow();
   const views = useLive(() => listTaskViews(nowMs, settings, weekStart));
-  const [reordering, setReordering] = useState(false);
+  const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
   const active = views.filter((v) => v.lifecycle === 'active');
   const finished = views.filter((v) => v.lifecycle === 'finished');
   const archived = views.filter((v) => v.lifecycle === 'archived');
   const today = todaySummary(active);
-
-  /** Moves one active task; only it gets a new sort order (domain/order.ts). */
-  function move(index: number, direction: -1 | 1) {
-    const order = active.map((v) => ({ id: v.task.id, sortOrder: v.task.sortOrder }));
-    reorderTasks(moveItem(order, index, direction));
-  }
+  const order = () => active.map((v) => ({ id: v.task.id, sortOrder: v.task.sortOrder }));
 
   return (
     <View style={styles.screen}>
@@ -54,9 +50,12 @@ export default function HomeScreen() {
           ),
         }}
       />
-      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 112 }]}>
+      <Animated.ScrollView
+        ref={scrollableRef}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 112 }]}
+      >
         <TimerBanner />
-        {today && !reordering ? <TodaySummary summary={today} /> : null}
+        {today ? <TodaySummary summary={today} /> : null}
         {views.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🎯</Text>
@@ -64,105 +63,50 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>{t('home.emptyBody')}</Text>
           </View>
         ) : null}
-        {active.length >= 2 || reordering ? (
-          <View style={styles.listHeader}>
-            {reordering ? <Text style={styles.reorderHint}>{t('home.reorderHint')}</Text> : null}
-            <Pressable
-              onPress={() => setReordering((on) => !on)}
-              hitSlop={8}
-              accessibilityRole="button"
-              aria-pressed={reordering}
-            >
-              <Text style={styles.listAction}>{reordering ? t('home.reorderDone') : t('home.reorder')}</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        {reordering
-          ? active.map((view, index) => (
-              <ReorderRow
-                key={view.task.id}
-                view={view}
-                first={index === 0}
-                last={index === active.length - 1}
-                onMove={(direction) => move(index, direction)}
-              />
-            ))
-          : active.map((view) => <TaskCard key={view.task.id} view={view} />)}
-        {reordering ? null : (
-          <>
-            <Section title={t('home.finished')} views={finished} initiallyOpen />
-            <Section title={t('home.archived')} views={archived} initiallyOpen={false} />
-          </>
-        )}
-      </ScrollView>
-      {reordering ? null : (
-        <Pressable
-          onPress={() => router.push('/task/new')}
-          style={({ pressed }) => [
-            styles.fab,
-            { bottom: insets.bottom + spacing.xl },
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={t('home.newTask')}
-        >
-          <Text style={styles.fabText}>＋ {t('home.newTask')}</Text>
-        </Pressable>
-      )}
+        {/* Active tasks: hold a card to drag it. Only the moved task gets a new sort order (domain/order.ts). */}
+        <Sortable.Grid
+          data={active}
+          keyExtractor={(view) => view.task.id}
+          columns={1}
+          rowGap={spacing.md}
+          renderItem={({ item, index }) => (
+            <TaskCard
+              view={item}
+              reorder={{
+                index,
+                count: active.length,
+                onMove: (direction) => reorderTasks(moveItem(order(), index, direction)),
+              }}
+            />
+          )}
+          onDragEnd={({ fromIndex, toIndex }) => reorderTasks(moveTo(order(), fromIndex, toIndex))}
+          scrollableRef={scrollableRef}
+          dragActivationDelay={DRAG_DELAY_MS}
+          activeItemScale={1.03}
+          hapticsEnabled={settings.vibration}
+        />
+        {active.length >= 2 ? <Text style={styles.dragHint}>{t('home.dragHint')}</Text> : null}
+        <Section title={t('home.finished')} views={finished} initiallyOpen />
+        <Section title={t('home.archived')} views={archived} initiallyOpen={false} />
+      </Animated.ScrollView>
+      <Pressable
+        onPress={() => router.push('/task/new')}
+        style={({ pressed }) => [
+          styles.fab,
+          { bottom: insets.bottom + spacing.xl },
+          pressed && styles.pressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={t('home.newTask')}
+      >
+        <Text style={styles.fabText}>＋ {t('home.newTask')}</Text>
+      </Pressable>
     </View>
   );
 }
 
-function ReorderRow(props: {
-  view: TaskView;
-  first: boolean;
-  last: boolean;
-  onMove: (direction: -1 | 1) => void;
-}) {
-  const { t } = useTranslation();
-  const styles = useThemedStyles(makeStyles);
-  const { task } = props.view;
-  return (
-    <View style={styles.reorderRow}>
-      <TaskBadge emoji={task.emoji} name={task.name} color={task.color} size={36} />
-      <Text style={styles.reorderName} numberOfLines={1}>
-        {task.name}
-      </Text>
-      <MoveButton
-        symbol="↑"
-        label={t('home.moveUp', { name: task.name })}
-        disabled={props.first}
-        onPress={() => props.onMove(-1)}
-      />
-      <MoveButton
-        symbol="↓"
-        label={t('home.moveDown', { name: task.name })}
-        disabled={props.last}
-        onPress={() => props.onMove(1)}
-      />
-    </View>
-  );
-}
-
-function MoveButton(props: { symbol: string; label: string; disabled: boolean; onPress: () => void }) {
-  const styles = useThemedStyles(makeStyles);
-  return (
-    <Pressable
-      onPress={props.onPress}
-      disabled={props.disabled}
-      style={({ pressed }) => [
-        styles.moveButton,
-        props.disabled && styles.moveDisabled,
-        pressed && styles.pressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={props.label}
-      aria-disabled={props.disabled}
-    >
-      <Text style={styles.moveSymbol}>{props.symbol}</Text>
-    </Pressable>
-  );
-}
+/** A press this long picks a card up; shorter presses scroll the list or open the task. */
+const DRAG_DELAY_MS = 350;
 
 /** A running stopwatch or countdown stays visible from Home so it's never forgotten. */
 function TimerBanner() {
@@ -272,57 +216,10 @@ function makeStyles(c: Colors) {
       color: c.textMuted,
       textAlign: 'center',
     },
-    listHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      gap: spacing.md,
-    },
-    reorderHint: {
-      flex: 1,
+    dragHint: {
       fontSize: 13,
       color: c.textMuted,
-    },
-    listAction: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: c.text,
-      textDecorationLine: 'underline',
-    },
-    reorderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      backgroundColor: c.surface,
-      borderRadius: radius.md,
-      paddingLeft: spacing.md,
-      paddingRight: spacing.sm,
-      paddingVertical: spacing.sm,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-    },
-    reorderName: {
-      flex: 1,
-      fontSize: 16,
-      fontWeight: '600',
-      color: c.text,
-    },
-    moveButton: {
-      width: 44,
-      height: 44,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: c.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    moveDisabled: {
-      opacity: 0.3,
-    },
-    moveSymbol: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: c.text,
+      textAlign: 'center',
     },
     sectionHeader: {
       flexDirection: 'row',

@@ -6,7 +6,7 @@ import { daysBetween, periodContaining, type Period, type Weekday } from './peri
 // far the total is from an even spread over the window.
 
 export type Pace = {
-  /** Needed per day from today on, rounded up to whole units (minutes for time goals). */
+  /** Needed per day from today on, rounded up to whole units (seconds for time goals). */
   perDay: number;
   /** Days left in the window, including today. */
   daysLeft: number;
@@ -50,14 +50,14 @@ export function computePace(
   const remaining = task.target - windowTotal;
   if (remaining <= 0) return null;
 
-  const unit = task.measure === 'duration' ? 60 : 1;
+  // Whole units: counts, or seconds for time goals (minutes until Phase 9).
   const daysLeft = daysBetween(today, window.end) + 1;
   const windowDays = daysBetween(window.start, window.end) + 1;
   const expectedByNow = (task.target * daysBetween(window.start, today)) / windowDays;
   return {
-    perDay: Math.ceil(remaining / daysLeft / unit) * unit,
+    perDay: Math.ceil(remaining / daysLeft),
     daysLeft,
     // Under one unit either way is "on pace"; `|| 0` turns -0 into 0.
-    ahead: Math.trunc((windowTotal - expectedByNow) / unit) * unit || 0,
+    ahead: Math.trunc(windowTotal - expectedByNow) || 0,
   };
 }

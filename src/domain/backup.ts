@@ -1,3 +1,4 @@
+import { formatIsoWithOffset } from './days';
 import { MAX_ABS_AMOUNT, MAX_INCREMENTS, MAX_NAME_LENGTH, MAX_UNIT_LENGTH } from './input';
 import type { Measure } from './measure';
 import { MAX_NOTE_LENGTH } from './notes';
@@ -67,8 +68,11 @@ export type ParsedBackup = { ok: true; backup: Backup } | { ok: false; error: Ba
 export function createBackup(
   data: { tasks: BackupTask[]; entries: BackupEntry[]; settings: BackupSetting[] },
   exportedAt: Date,
+  /** The phone's UTC offset, so the export time reads as the phone's clock, not UTC. */
+  utcOffsetMin = 0,
 ): Backup {
-  return { app: BACKUP_APP, format: BACKUP_FORMAT, exportedAt: exportedAt.toISOString(), ...data };
+  const at = formatIsoWithOffset(exportedAt.getTime(), utcOffsetMin);
+  return { app: BACKUP_APP, format: BACKUP_FORMAT, exportedAt: at, ...data };
 }
 
 export function serializeBackup(backup: Backup): string {

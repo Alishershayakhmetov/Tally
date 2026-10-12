@@ -4,7 +4,7 @@ A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, 
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phases 0–7
+## Status: Phases 0–9
 
 **Counting (Phase 0)**
 
@@ -30,13 +30,13 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 
 **Time and reminders (Phase 2)**
 
-- **Time goals** ("plank 10 minutes a day"): amounts show as `m:ss` / `h:mm:ss`, buttons add minutes, and typed amounts accept `25` (minutes), `1:30` or `1:05:00`.
+- **Time goals** ("plank 10 minutes a day"): amounts show as `m:ss` / `h:mm:ss`, buttons add minutes, and typed amounts accept `25` (minutes), `1:30` or `1:05:00`. Since Phase 9 you can also pick Hours, Minutes or Seconds and type a plain number (`1.5` hours, `45` seconds).
 - **Stopwatch** with pause, resume, stop-and-log and discard. It's stored as timestamps, so it survives the app being backgrounded or killed, and it logs to the day it started. The screen stays on while it runs on the counter screen, and Home shows a banner while one is running. One stopwatch at a time.
 - **Reminders** at a per-task time, **skipped when that day's or period's goal is already met** (a total goal: skipped on days you already logged). After every change the app cancels its reminders and plans the next two weeks again, so there's nothing to keep in sync. Tapping a reminder opens its task. Permission is asked for the first time you turn a reminder on, and Settings shows its status.
 
 **Pace, streaks and backup (Phase 3)**
 
-- **Pace** for a total goal with a deadline, or a weekly/monthly quota: "Need 31/day · 37 ahead of pace". Ahead/behind compares your total with an even spread up to the start of today, so the morning never counts as "behind".
+- **Pace** for a total goal with a deadline, or a weekly/monthly quota: "Need 31/day · 37 ahead of pace". Ahead/behind compares your total with an even spread up to the start of today, so the morning never counts as "behind". For time goals both are in whole seconds (the need per day rounded up), not minutes.
 - **Streaks**: consecutive met days, weeks or months (rest days don't break them), or consecutive days with anything logged for a total goal. A period still in progress extends a streak but never breaks it. The counter shows current and best; Home cards get a 🔥 badge from 2 in a row.
 - **Backup** in Settings. **Export** writes one JSON file (every task and entry, including deletions, plus settings) and opens the share sheet, so it can go to Drive, Telegram or email. **Import** merges a file into the phone: rows are matched by ID and the newer edit wins, so importing the same file twice changes nothing. The whole file is validated first and applied in one transaction, so a damaged file changes nothing. Because a deletion counts as an edit, a task deleted on the phone after the export stays deleted.
 
@@ -50,7 +50,7 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 
 **Order, templates and notes (Phase 5)**
 
-- **Reorder** tasks on Home: tap **Reorder**, then use the ↑/↓ buttons, which work with screen readers too. Each move rewrites only the moved task's position.
+- **Reorder** tasks on Home (since Phase 8 by dragging; see below). Each move rewrites only the moved task's position.
 - **Templates:** New task starts with a row of 8 ready-made goals (100 push-ups a day, 1000 squats in 30 days, 8 glasses of water, run 20 km a week, plank 5 min, read 20 pages, cycle 300 km a month, meditate 10 min). Picking one fills the form, and you can change anything before saving.
 - **Notes on entries** ("felt tired", "new record"):
   - Add one from the Undo bar right after logging, while typing an amount, by tapping a recent entry, or in History.
@@ -61,7 +61,7 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 
 - **Countdown** for time goals: the timer panel switches between Stopwatch and Countdown.
   - The length starts at what's left today (or the pace line's need per day). Change it by a minute with −/+, or tap it to type a time.
-  - At 0:00 a notification sounds, and the countdown keeps running as overtime (+0:12). Stop logs the whole time, so holding a plank longer still counts.
+  - At 0:00 a notification plays the phone's standard notification sound, and the countdown keeps running as overtime (+0:12). Stop logs the whole time, so holding a plank longer still counts.
   - While Tally is open the alert comes exactly on time. With the app closed it's a scheduled notification, which Android may deliver late (see Known limitations).
 - **Tap mode** for count goals: the whole screen becomes a +1 button, for logging in the middle of a set (tap with your nose during push-ups).
   - It shows this set's count and today's progress, and keeps the screen on.
@@ -74,6 +74,24 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 - The widget shows the **first active tasks on Home**: 1 on a small widget, up to 3 on a larger one. Reorder Home to choose them. Each row has the task's progress for today (or this week, month, or in total) and a **+** button that adds the task's smallest button (+1, +5, +1 min). Tapping a row opens that task.
 - **Android** (`react-native-android-widget`): + is logged straight into the database, even with the app closed, and presses within 2 s merge into one entry like counter taps. The widget redraws after every change in the app and every 30 minutes, and follows the system's light/dark mode.
 - **iOS** (`expo-widgets`, iOS 17+ for the + button): the widget runs apart from the app and can't reach the database. A press is kept in the widget, which shows it right away; the app logs kept presses with their original times the next time it runs. The app gives the widget snapshots for the next few day boundaries, so "today" resets on time.
+
+**Order, icons, colours and the keyboard (Phase 8)**, from user feedback:
+
+- **Drag to reorder:** hold a task card on Home, then drag it to a new place. The list scrolls by itself near the edges. Screen readers get "move up/down" actions on each card instead.
+- **Icons:** the quick row of 10 is still there, and **More…** opens a picker with about 230 emoji in 9 categories (sport, health, food, study, work, home, hobbies, nature, symbols). You can also type or paste any emoji.
+- **Any colour:** the **+** after the built-in colours opens a picker with a saturation/brightness panel, a hue slider and a HEX field. A custom colour gets its own swatch. Text on task colours (buttons, chips, badges) switches between white and near-black to stay readable, and bars and outlines are nudged to stay visible on the card.
+- **Keyboard:** the task form scrolls the focused field above the keyboard, so the counter buttons and their preview stay visible while you type.
+
+**Time input, pace in seconds, sound, and Dropbox sync (Phase 9)**
+
+- **Time in a unit:** wherever you type a time (Enter amount, editing an entry, the countdown length, a time goal's target), a stacked choice offers **h:mm:ss format**, **Hours**, **Minutes** or **Seconds**. With a unit picked, type a plain number: `1.5` or `1,5` hours, `90` seconds. A number typed before picking the unit keeps its digits; a time like `1:30:00` converts to `1.5` hours when that's exact.
+- **Pace in seconds** for time goals (see Phase 3).
+- **Sound:** reminders and the countdown alert use each platform's standard notification sound (the app ships no sound files). On Android it's the phone's default notification sound, changeable per channel (Reminders, Countdown) in the system settings.
+- **Dropbox sync** in Settings. **Connect Dropbox** signs in on Dropbox's own page; Tally never sees the password. After that, sync runs by itself: on launch, when you come back to the app, a few seconds after a change, and when you leave the app with changes not yet uploaded. **Sync now** and **Disconnect** are there too.
+  - The data is one file, `tally-sync.json`, in the app's own folder in your Dropbox (Apps). It's the backup format, so the file is also a valid backup for Import.
+  - Two devices merge with the backup's rule: rows match by ID and the later edit wins, deletions included. Each device downloads the file, merges it in, and uploads only if the file lacks something, naming the revision it downloaded, so two devices uploading at once can't overwrite each other: the second one merges again and retries.
+  - A file that can't be read (damaged, or from a newer Tally) is never overwritten.
+  - Disconnecting keeps the data on the phone and the file in Dropbox.
 
 ## Build an installable APK
 
@@ -124,20 +142,33 @@ npx expo start --tunnel
 
 CI (`.github/workflows/ci.yml`) runs typecheck, lint, format check and tests. It also fails if the schema changed without a migration, and it bundles the app for Android.
 
+## Dropbox sync setup
+
+The app talks to Dropbox through an app registered in the [Dropbox App Console](https://www.dropbox.com/developers/apps) (the app key is in `src/features/sync/dropbox.ts`). Sign-in uses OAuth 2 with PKCE, so the app holds no secret. The app needs:
+
+- **Access type:** App folder.
+- **Permissions** tab: `files.content.read` and `files.content.write` (then **Submit**). Tokens issued before a permission change don't get it; disconnect and connect again.
+- **Settings → OAuth 2 → Redirect URIs:** `taskcounter://dropbox-auth`. Without it, Dropbox shows "Invalid redirect_uri" instead of its sign-in page.
+- **Allow public clients (Implicit Grant & PKCE):** Allow.
+
+While the Dropbox app is in development status, up to 500 Dropbox accounts can connect it; more need Dropbox's production approval.
+
 ## End-to-end tests (Maestro)
 
 The flows in `.maestro/` drive the real release APK on an Android emulator:
 
-| Flow                         | What it checks                                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `01_count_and_undo.yaml`     | Create a task from a template, +1 taps, a typed amount and its Undo, Home's progress              |
-| `02_notes.yaml`              | ADD NOTE from the Undo bar, chips, the note in History, editing it there, removing it             |
-| `03_reorder.yaml`            | New tasks go last, Move up, and the order survives closing the app                                |
-| `04_stats_and_settings.yaml` | Statistics tiles and ranges, the Vibration switch (off by default), switching to Russian and back |
-| `05_tap_mode_and_today.yaml` | Tap mode's +1 area and −1, then Home's Today summary as a daily goal is met                       |
-| `06_countdown.yaml`          | A typed countdown length, 0:00 turning into overtime, and Stop logging the whole time             |
+| Flow                         | What it checks                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `01_count_and_undo.yaml`     | Create a task from a template, +1 taps, a typed amount and its Undo, Home's progress                    |
+| `02_notes.yaml`              | ADD NOTE from the Undo bar, chips, the note in History, editing it there, removing it                   |
+| `03_reorder.yaml`            | New tasks go last, the drag hint, a tap still opens a task, and the order survives a restart            |
+| `04_stats_and_settings.yaml` | Statistics tiles and ranges, the Vibration switch (off by default), switching to Russian and back       |
+| `05_tap_mode_and_today.yaml` | Tap mode's +1 area and −1, then Home's Today summary as a daily goal is met                             |
+| `06_countdown.yaml`          | A typed countdown length, 0:00 turning into overtime, and Stop logging the whole time                   |
+| `07_icons_and_colours.yaml`  | An icon from the picker's Food category, a colour typed as HEX, and the task saved with both            |
+| `08_time_units.yaml`         | Amounts typed as seconds and hours, the format still working, a countdown length and a target in a unit |
 
-Each flow starts from cleared app data, so they can run in any order. Shared steps live in `.maestro/subflows/`. Flows use English text and the screen-reader labels the app already has (`Add 10`, `Move Push-ups up`), plus a `testID` where text is ambiguous.
+Each flow starts from cleared app data, so they can run in any order. Shared steps live in `.maestro/subflows/`. Flows use English text and the screen-reader labels the app already has (`Add 10`, `Pick any colour`), plus a `testID` where text is ambiguous. Maestro can't hold a press still before moving, so dragging a card is checked by hand with `adb shell input draganddrop`.
 
 **One-time setup** (Windows paths shown):
 
@@ -152,6 +183,12 @@ Each flow starts from cleared app data, so they can run in any order. Shared ste
 ```
 
 Use the GPU (`-gpu host`). With software rendering (`swiftshader`), the emulator lost its adb connection between flows ("device offline").
+
+If every flow stops on the blue splash screen, the emulator's animation state is stuck (seen once, after changing the device date): the splash's fade-out never ends. Setting the scales again fixes it:
+
+```bash
+adb shell settings put global animator_duration_scale 1
+```
 
 ```bash
 npm run e2e:build
@@ -173,7 +210,8 @@ src/
   domain/       pure TypeScript, no React/Expo: days, periods, goals, progress, tap merging,
                 input validation (error codes, not English text), settings parsing
   db/           Drizzle schema, database client, repositories, re-grouping SQL, useLive()
-  features/     screen logic: useCounter, task view models, goal text, the task form, backup, stats charts
+  features/     screen logic: useCounter, task view models, goal text, the task form, backup, stats charts,
+                Dropbox sync (sign-in, HTTP client, the sync round, automatic triggers)
   i18n/         en.json, ru.json, i18next setup, date and error formatting
   lib/          clock (with dev offset), theme hooks, contrast, week start, haptics
   notifications/ reminder scheduling on top of the pure planner in domain/reminders.ts, and the countdown alert
@@ -186,7 +224,7 @@ assets/         icon.svg (the icon master) and the PNGs exported from it: launch
                 foreground and monochrome, notification, splash, favicon
 ```
 
-- **A count is never stored.** Each change is an entry with a signed amount, and the total is the sum of entries. Undo and history come for free, and future cloud sync can merge two devices without conflicts (SPEC §6.3).
+- **A count is never stored.** Each change is an entry with a signed amount, and the total is the sum of entries. Undo and history come for free, and Dropbox sync merges two devices without conflicts (SPEC §6.3).
 - **Entries keep the moment they were logged and the device's UTC offset.** The day an entry belongs to (`local_date`) is a cache derived from those, so changing a cutoff re-groups history with one SQL statement and never touches `updated_at`. The TypeScript function and its SQL twin are tested against each other on 5,000 random inputs, and the re-grouping statements run in Jest against real SQLite with the actual migrations.
 - **Periods are pure date arithmetic** on `YYYY-MM-DD` strings (weeks, months, weekday masks, leap years), so daylight-saving changes can't shift a day.
 - **Soft deletes and client-generated UUIDs** throughout, so the local data is ready for sync later.
@@ -199,6 +237,7 @@ assets/         icon.svg (the icon master) and the PNGs exported from it: launch
 - Verified so far in a browser (with that bug patched locally) and by unit tests. **Not yet run on a real phone**, so Android-only behaviour is unconfirmed: notifications firing, haptics, keeping the screen on, the system dark-mode switch, and `Intl.PluralRules` on Hermes (polyfilled if missing).
 - **Reminders** don't exist on web. On Android they use inexact alarms, so they can arrive a few minutes late (exact alarms need a special permission that Android 14 denies by default). They're planned two weeks ahead, so if the app isn't opened for two weeks, they stop until it is.
 - **The countdown's 0:00 alert** has the same limit when Tally is closed or the phone is locked: it can arrive late. While the app is open (the counter screen keeps the screen on while a timer runs), the app posts the alert itself, on time.
+- **Dropbox sync** runs only while Tally is open (no background sync), so a change made with the app closed (a widget press on Android) goes up the next time the app runs. The whole file goes up and down each time, which is fine for a personal history but grows with it. "Later edit wins" compares the devices' clocks, so a device with a wrong clock can win when it shouldn't. Sign-in and sync against the real Dropbox haven't been run yet, only against fakes in tests (SPEC Phase 9).
 - Header actions ("Settings", "Edit") are text buttons; no icon set is installed.
 - **Widgets** need a native build: Expo Go has neither widget module, so there the app runs without them.
   - **Android:** tested on the emulator (see SPEC Phase 7), not yet on a phone. The widget picker shows its English label and the app icon instead of a preview image.

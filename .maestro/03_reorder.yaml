@@ -1,6 +1,9 @@
 appId: com.alishershayakhmetov.taskcounter
-name: Reorder tasks, and the order survives a restart
+name: Task order, the drag hint, and the order surviving a restart
 ---
+# Dragging itself needs a press held still before the finger moves, which
+# Maestro's swipe can't do; it's checked by hand with `adb shell input
+# draganddrop` (SPEC Phase 8). This flow covers what surrounds it.
 - launchApp:
     clearState: true
 - runFlow:
@@ -14,21 +17,19 @@ name: Reorder tasks, and the order survives a restart
       TEMPLATE: Push-ups
 - back
 
-# New tasks go to the end.
+# New tasks go to the end, and with two of them Home explains how to move them.
 - assertVisible:
     text: 'Push-ups, .*'
     below: 'Water, .*'
+- assertVisible: 'Hold a card to drag it to a new place.'
 
-- tapOn: 'Reorder'
-- assertVisible: 'Use the arrows to change the order.'
-- tapOn: 'Move Push-ups up'
-- tapOn: 'Done'
-- assertVisible:
-    text: 'Water, .*'
-    below: 'Push-ups, .*'
+# A short tap still opens the task.
+- tapOn: 'Water, .*'
+- assertVisible: 'Enter amount…'
+- back
 
 - stopApp
 - launchApp
 - assertVisible:
-    text: 'Water, .*'
-    below: 'Push-ups, .*'
+    text: 'Push-ups, .*'
+    below: 'Water, .*'

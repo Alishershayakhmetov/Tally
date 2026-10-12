@@ -1,10 +1,18 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { numberKeyboard } from '@/components/AmountDialog';
 import { CalendarDialog } from '@/components/CalendarDialog';
+import { ColorPickerDialog } from '@/components/ColorPickerDialog';
+import {
+  DurationUnitPicker,
+  durationKeyboard,
+  unitHint,
+  unitPlaceholder,
+} from '@/components/DurationUnitPicker';
+import { EmojiPickerDialog } from '@/components/EmojiPickerDialog';
 import { ReminderTimePicker, shiftReminderTime } from '@/components/ReminderTimePicker';
 import { Segmented } from '@/components/Segmented';
 import { TaskBadge } from '@/components/TaskBadge';
@@ -20,12 +28,12 @@ import {
   type TaskFormValues,
   type ValidTaskForm,
 } from '@/domain/input';
-import type { Measure } from '@/domain/measure';
+import { switchDurationUnit, type DurationUnit, type Measure } from '@/domain/measure';
 import type { Recurrence } from '@/domain/periods';
 import { clampDayStart, formatMinutes } from '@/domain/settings';
 import { formatDate, formatError } from '@/i18n/format';
 import { remindersSupported, useNotificationPermission } from '@/notifications/scheduler';
-import { readableOn } from '@/lib/contrast';
+import { readableOn, textOn, visibleOn } from '@/lib/contrast';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { useWeekStart } from '@/lib/weekStart';
 import { radius, spacing, TASK_COLORS, TASK_EMOJIS, type Colors } from '@/theme';
@@ -73,9 +81,17 @@ export function TaskForm({
     setErrors({});
   }
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [permission, requestPermission] = useNotificationPermission();
   const incrementsPreview = parseIncrements(values.increments);
   const accentText = readableOn(values.color, colors.surface, colors.text);
+  /** Outlines in the task colour (selected icon, minus buttons) stay visible on the card, even for light colours. */
+  const outline = visibleOn(values.color, colors.surface);
+  /** The quick icon row; the picker has the full set. */
+  const quickEmojis: readonly string[] = TASK_EMOJIS;
+  /** A colour from the picker that isn't one of the built-ins gets its own swatch. */
+  const customColor = !(TASK_COLORS as readonly string[]).includes(values.color);
   const isTime = values.measure === 'duration';
 
   function setReminder(on: boolean) {
@@ -99,6 +115,12 @@ export function TaskForm({
     setErrors((e) => (key in e ? { ...e, [key]: undefined } : e));
   }
 
+  /** A number typed so far keeps its digits; a time like 1:30:00 is converted when it can be. */
+  function changeTargetUnit(next: DurationUnit) {
+    setValues((v) => ({ ...v, target: switchDurationUnit(v.target, v.targetUnit, next), targetUnit: next }));
+    setErrors((e) => ('target' in e ? { ...e, target: undefined } : e));
+  }
+
   function submit() {
     const result = validateTaskForm(values, startDate);
     if (!result.ok) {
@@ -116,9 +138,12 @@ export function TaskForm({
   };
 
   return (
-    <ScrollView
+    // Scrolls the focused field above the keyboard. The offset also keeps what sits under a field
+    // in view, such as the preview of the counter buttons.
+    <KeyboardAwareScrollView
       contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + spacing.xxl }]}
       keyboardShouldPersistTaps="handled"
+      bottomOffset={KEYBOARD_OFFSET}
     >
       {header}
       <View style={styles.preview}>
@@ -173,7 +198,7 @@ export function TaskForm({
         error={errors.target ?? errors.unitLabel}
         hint={
           isTime
-            ? `${targetHint[values.recurrence]} ${t('form.targetTimeHint')}`
+            ? `${targetHint[values.recurrence]} ${unitHint(t, values.targetUnit) ?? t('form.targetTimeHint')}`
             : targetHint[values.recurrence]
         }
       >
@@ -181,9 +206,13 @@ export function TaskForm({
           <TextInput
             value={values.target}
             onChangeText={(text) => set('target', text)}
-            placeholder={isTime ? t('form.targetPlaceholderTime') : t('form.targetPlaceholder')}
+            placeholder={
+              isTime
+                ? (unitPlaceholder(t, values.targetUnit) ?? t('form.targetPlaceholderTime'))
+                : t('form.targetPlaceholder')
+            }
             placeholderTextColor={colors.textMuted}
-            keyboardType={isTime ? numberKeyboard('duration') : 'number-pad'}
+            keyboardType={isTime ? durationKeyboard(values.targetUnit) : 'number-pad'}
             style={[styles.input, styles.targetInput]}
             accessibilityLabel={t('form.target')}
           />
@@ -199,6 +228,7 @@ export function TaskForm({
             />
           )}
         </View>
+        {isTime ? <DurationUnitPicker value={values.targetUnit} onChange={changeTargetUnit} /> : null}
       </Field>
 
       {values.recurrence === 'daily' ? (
@@ -285,11 +315,14 @@ export function TaskForm({
 
       <Field label={t('form.icon')}>
         <View style={styles.chips}>
-          {TASK_EMOJIS.map((emoji) => (
+          {[
+            ...(values.emoji && !quickEmojis.includes(values.emoji) ? [values.emoji] : []),
+            ...quickEmojis,
+          ].map((emoji) => (
             <Pressable
               key={emoji}
               onPress={() => set('emoji', values.emoji === emoji ? null : emoji)}
-              style={[styles.emojiChip, values.emoji === emoji && { borderColor: values.color }]}
+              style={[styles.emojiChip, values.emoji === emoji && { borderColor: outline }]}
               accessibilityRole="radio"
               aria-checked={values.emoji === emoji}
               accessibilityLabel={t('form.iconLabel', { emoji })}
@@ -297,12 +330,20 @@ export function TaskForm({
               <Text style={styles.emoji}>{emoji}</Text>
             </Pressable>
           ))}
+          <Pressable
+            onPress={() => setIconPickerOpen(true)}
+            style={[styles.emojiChip, styles.moreChip]}
+            accessibilityRole="button"
+            accessibilityLabel={t('form.iconMore')}
+          >
+            <Text style={styles.moreText}>{t('form.iconMoreShort')}</Text>
+          </Pressable>
         </View>
       </Field>
 
       <Field label={t('form.color')}>
         <View style={styles.chips}>
-          {TASK_COLORS.map((color) => (
+          {[...TASK_COLORS, ...(customColor ? [values.color] : [])].map((color) => (
             <Pressable
               key={color}
               onPress={() => set('color', color)}
@@ -316,6 +357,14 @@ export function TaskForm({
               accessibilityLabel={t('form.colorLabel', { color })}
             />
           ))}
+          <Pressable
+            onPress={() => setColorPickerOpen(true)}
+            style={[styles.swatch, styles.pickSwatch]}
+            accessibilityRole="button"
+            accessibilityLabel={t('colorPicker.open')}
+          >
+            <Text style={styles.pickText}>＋</Text>
+          </Pressable>
         </View>
       </Field>
 
@@ -341,10 +390,10 @@ export function TaskForm({
                 key={n}
                 style={[
                   styles.incrementChip,
-                  n > 0 ? { backgroundColor: values.color } : { borderColor: values.color, borderWidth: 1.5 },
+                  n > 0 ? { backgroundColor: values.color } : { borderColor: outline, borderWidth: 1.5 },
                 ]}
               >
-                <Text style={[styles.incrementText, { color: n > 0 ? '#FFFFFF' : accentText }]}>
+                <Text style={[styles.incrementText, { color: n > 0 ? textOn(values.color) : accentText }]}>
                   {formatSigned(n)}
                 </Text>
               </View>
@@ -358,11 +407,26 @@ export function TaskForm({
         style={({ pressed }) => [styles.save, { backgroundColor: values.color }, pressed && styles.pressed]}
         accessibilityRole="button"
       >
-        <Text style={styles.saveText}>{submitLabel}</Text>
+        <Text style={[styles.saveText, { color: textOn(values.color) }]}>{submitLabel}</Text>
       </Pressable>
 
       {footer}
 
+      {iconPickerOpen ? (
+        <EmojiPickerDialog
+          value={values.emoji}
+          color={values.color}
+          onSelect={(emoji) => set('emoji', emoji)}
+          onClose={() => setIconPickerOpen(false)}
+        />
+      ) : null}
+      {colorPickerOpen ? (
+        <ColorPickerDialog
+          value={values.color}
+          onSelect={(color) => set('color', color)}
+          onClose={() => setColorPickerOpen(false)}
+        />
+      ) : null}
       {calendarOpen ? (
         <CalendarDialog
           visible
@@ -374,9 +438,12 @@ export function TaskForm({
           onClose={() => setCalendarOpen(false)}
         />
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
+
+/** Space kept between the focused field and the keyboard, in dp. */
+const KEYBOARD_OFFSET = 96;
 
 function Field({
   label,
@@ -505,6 +572,28 @@ function makeStyles(c: Colors) {
     },
     emoji: {
       fontSize: 24,
+    },
+    moreChip: {
+      width: 'auto',
+      paddingHorizontal: spacing.md,
+      borderColor: c.border,
+      borderStyle: 'dashed',
+    },
+    moreText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    pickSwatch: {
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderStyle: 'dashed',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pickText: {
+      fontSize: 20,
+      color: c.text,
     },
     swatch: {
       width: 40,

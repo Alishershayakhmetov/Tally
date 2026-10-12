@@ -1,4 +1,4 @@
-import { parseDurationText, type Measure } from './measure';
+import { parseDurationIn, type DurationUnit, type Measure } from './measure';
 import type { Recurrence } from './periods';
 import { parseReminderTime } from './reminders';
 import { isValidDayStart } from './settings';
@@ -33,7 +33,9 @@ export type InputError = {
     | 'endBeforeStart'
     | 'dayStartInvalid'
     | 'countdownInvalid'
-    | 'countdownTooLong';
+    | 'countdownTooLong'
+    | 'numberInvalid'
+    | 'numberNotPositive';
   params?: Record<string, string | number>;
 };
 
@@ -50,30 +52,51 @@ export function parseSignedInt(text: string): number | null {
   return match[1] === '-' || match[1] === '−' ? -magnitude : magnitude;
 }
 
-/** A count, or for time goals minutes / m:ss / h:mm:ss (returned in seconds). */
-export function parseAmount(text: string, measure: Measure = 'count'): Result<number> {
-  const value = measure === 'duration' ? parseDurationText(text) : parseSignedInt(text);
+/**
+ * A count, or for time goals a time in seconds: minutes / m:ss / h:mm:ss, or a
+ * plain number of the `unit` the user picked.
+ */
+export function parseAmount(
+  text: string,
+  measure: Measure = 'count',
+  unit: DurationUnit = 'format',
+): Result<number> {
+  const value = measure === 'duration' ? parseDurationIn(text, unit) : parseSignedInt(text);
   if (value === null) {
-    return { ok: false, error: { code: measure === 'duration' ? 'durationInvalid' : 'amountNotInteger' } };
+    const code =
+      measure === 'count' ? 'amountNotInteger' : unit === 'format' ? 'durationInvalid' : 'numberInvalid';
+    return { ok: false, error: { code } };
   }
   if (value === 0) return { ok: false, error: { code: 'amountZero' } };
   if (Math.abs(value) > MAX_ABS_AMOUNT) return { ok: false, error: { code: 'amountTooLarge' } };
   return { ok: true, value };
 }
 
-export function parseTarget(text: string, measure: Measure = 'count'): Result<number> {
-  const value = measure === 'duration' ? parseDurationText(text) : parseSignedInt(text);
+export function parseTarget(
+  text: string,
+  measure: Measure = 'count',
+  unit: DurationUnit = 'format',
+): Result<number> {
+  const value = measure === 'duration' ? parseDurationIn(text, unit) : parseSignedInt(text);
   if (value === null || value <= 0) {
-    return { ok: false, error: { code: measure === 'duration' ? 'durationTargetInvalid' : 'targetInvalid' } };
+    const code =
+      measure === 'count'
+        ? 'targetInvalid'
+        : unit === 'format'
+          ? 'durationTargetInvalid'
+          : 'numberNotPositive';
+    return { ok: false, error: { code } };
   }
   if (value > MAX_ABS_AMOUNT) return { ok: false, error: { code: 'targetTooLarge' } };
   return { ok: true, value };
 }
 
-/** A countdown length: minutes, m:ss or h:mm:ss, above 0 and at most 24 h. In seconds. */
-export function parseCountdown(text: string): Result<number> {
-  const value = parseDurationText(text);
-  if (value === null || value <= 0) return { ok: false, error: { code: 'countdownInvalid' } };
+/** A countdown length above 0 and at most 24 h, in seconds. */
+export function parseCountdown(text: string, unit: DurationUnit = 'format'): Result<number> {
+  const value = parseDurationIn(text, unit);
+  if (value === null || value <= 0) {
+    return { ok: false, error: { code: unit === 'format' ? 'countdownInvalid' : 'numberNotPositive' } };
+  }
   if (value > MAX_COUNTDOWN_SECONDS) return { ok: false, error: { code: 'countdownTooLong' } };
   return { ok: true, value };
 }
@@ -110,8 +133,10 @@ export type TaskFormValues = {
   measure: Measure;
   /** Counts only; ignored for time goals. */
   unitLabel: string;
-  /** A number, or for time goals minutes / m:ss / h:mm:ss. */
+  /** A number, or for time goals minutes / m:ss / h:mm:ss, or a number of `targetUnit`. */
   target: string;
+  /** How a time goal's target is typed; counts ignore it. */
+  targetUnit: DurationUnit;
   /** Units, or minutes for time goals. */
   increments: string;
   recurrence: Recurrence;
@@ -159,7 +184,7 @@ export function validateTaskForm(
   if (unitLabel.length > MAX_UNIT_LENGTH)
     errors.unitLabel = { code: 'unitTooLong', params: { max: MAX_UNIT_LENGTH } };
 
-  const target = parseTarget(values.target, values.measure);
+  const target = parseTarget(values.target, values.measure, values.targetUnit);
   if (!target.ok) errors.target = target.error;
   const increments = parseIncrements(values.increments);
   if (!increments.ok) errors.increments = increments.error;

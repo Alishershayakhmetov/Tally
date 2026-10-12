@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type AccessibilityActionEvent } from 'react-native';
+import Sortable from 'react-native-sortables';
 
 import { formatProgressLine } from '@/domain/format';
 import { formatAmount } from '@/domain/measure';
@@ -19,7 +21,10 @@ import { radius, spacing, type Colors } from '@/theme';
 import { ProgressBar } from './ProgressBar';
 import { TaskBadge } from './TaskBadge';
 
-export function TaskCard({ view }: { view: TaskView }) {
+/** A card on Home's draggable list: its place, and how to move it one step (screen readers). */
+export type CardReorder = { index: number; count: number; onMove: (direction: -1 | 1) => void };
+
+export function TaskCard({ view, reorder }: { view: TaskView; reorder?: CardReorder }) {
   const { t } = useTranslation();
   const styles = useThemedStyles(makeStyles);
   const { task, goal, lifecycle, summary } = view;
@@ -40,25 +45,22 @@ export function TaskCard({ view }: { view: TaskView }) {
       ? endedStatusText(t, view)
       : [t('goal.archivedLabel'), endedStatusText(t, view)].join(' · ');
   const fraction = summary && summary.total > 0 ? summary.met / summary.total : progress.fraction;
+  const open = () => router.push({ pathname: '/task/[id]', params: { id: task.id } });
+  const label = [
+    task.name,
+    progressLine,
+    active
+      ? [windowLabel(t, task.recurrence), deadlineText(t, view), badge ? streakLabel(t, view) : null]
+          .filter(Boolean)
+          .join(', ')
+      : subline,
+    active ? statusText(t, view) : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
-  return (
-    <Pressable
-      onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
-      style={({ pressed }) => [styles.card, !active && styles.inactive, pressed && styles.pressed]}
-      accessibilityRole="button"
-      accessibilityLabel={[
-        task.name,
-        progressLine,
-        active
-          ? [windowLabel(t, task.recurrence), deadlineText(t, view), badge ? streakLabel(t, view) : null]
-              .filter(Boolean)
-              .join(', ')
-          : subline,
-        active ? statusText(t, view) : null,
-      ]
-        .filter(Boolean)
-        .join(', ')}
-    >
+  const body = (
+    <>
       <View style={styles.row}>
         <TaskBadge emoji={task.emoji} name={task.name} color={task.color} />
         <View style={styles.text}>
@@ -90,7 +92,72 @@ export function TaskCard({ view }: { view: TaskView }) {
         ) : null}
       </View>
       <ProgressBar fraction={fraction} color={task.color} />
+    </>
+  );
+
+  if (reorder) {
+    return (
+      <SortableCard label={label} name={task.name} reorder={reorder} onOpen={open}>
+        {body}
+      </SortableCard>
+    );
+  }
+  return (
+    <Pressable
+      onPress={open}
+      style={({ pressed }) => [styles.card, !active && styles.inactive, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      {body}
     </Pressable>
+  );
+}
+
+/**
+ * A card inside Sortable.Grid (Home): a tap opens the task, a long press picks
+ * it up to drag. Taps go through Sortable.Touchable so they don't fight the
+ * drag gesture. Screen readers get "move up/down" actions instead of dragging.
+ */
+function SortableCard(props: {
+  label: string;
+  name: string;
+  reorder: CardReorder;
+  onOpen: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const styles = useThemedStyles(makeStyles);
+  const [pressed, setPressed] = useState(false);
+  const { index, count, onMove } = props.reorder;
+  const actions = [
+    { name: 'activate' },
+    ...(index > 0 ? [{ name: 'moveUp', label: t('home.moveUp', { name: props.name }) }] : []),
+    ...(index < count - 1 ? [{ name: 'moveDown', label: t('home.moveDown', { name: props.name }) }] : []),
+  ];
+
+  function onAction(event: AccessibilityActionEvent) {
+    const action = event.nativeEvent.actionName;
+    if (action === 'activate') props.onOpen();
+    else if (action === 'moveUp') onMove(-1);
+    else if (action === 'moveDown') onMove(1);
+  }
+
+  return (
+    <Sortable.Touchable
+      onTap={props.onOpen}
+      onTouchesDown={() => setPressed(true)}
+      onTouchesUp={() => setPressed(false)}
+      style={[styles.card, pressed && styles.held]}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={props.label}
+      accessibilityHint={t('home.dragHint')}
+      accessibilityActions={actions}
+      onAccessibilityAction={onAction}
+    >
+      {props.children}
+    </Sortable.Touchable>
   );
 }
 
@@ -109,6 +176,10 @@ function makeStyles(c: Colors) {
     },
     pressed: {
       opacity: 0.6,
+    },
+    // A draggable card stays opaque while held, so it doesn't fade once it's lifted.
+    held: {
+      backgroundColor: c.track,
     },
     row: {
       flexDirection: 'row',

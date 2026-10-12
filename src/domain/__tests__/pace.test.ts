@@ -79,12 +79,17 @@ describe('computePace', () => {
     });
   });
 
-  it('rounds time goals to whole minutes', () => {
+  it('rounds time goals to whole seconds, the need per day upwards', () => {
     const time: PaceTask = { ...total, measure: 'duration', target: 600 * 60, endDate: '2026-10-30' };
-    expect(computePace(time, '2026-10-01', MONDAY, 10)).toEqual({ perDay: 20 * 60, daysLeft: 30, ahead: 0 });
+    // 35 990 s over 30 days is 1199.67 s a day
+    expect(computePace(time, '2026-10-01', MONDAY, 10)).toEqual({ perDay: 1200, daysLeft: 30, ahead: 10 });
     // 10 of 30 days done → 12 000 s expected
-    expect(computePace(time, '2026-10-11', MONDAY, 12_100)?.ahead).toBe(60);
-    expect(computePace(time, '2026-10-11', MONDAY, 12_030)?.ahead).toBe(0);
-    expect(computePace(time, '2026-10-11', MONDAY, 11_000)?.ahead).toBe(-960);
+    expect(computePace(time, '2026-10-11', MONDAY, 12_100)?.ahead).toBe(100);
+    expect(computePace(time, '2026-10-11', MONDAY, 12_030)?.ahead).toBe(30);
+    expect(computePace(time, '2026-10-11', MONDAY, 11_000)?.ahead).toBe(-1000);
+    // An hour over a week: 514.29 s a day expected, 3100 s left for 6 days is 516.67 s a day
+    const hour: PaceTask = { ...time, target: 3600, endDate: '2026-10-07' };
+    expect(computePace(hour, '2026-10-02', MONDAY, 500)).toEqual({ perDay: 517, daysLeft: 6, ahead: -14 });
+    expect(computePace(hour, '2026-10-02', MONDAY, 514)?.ahead).toBe(0);
   });
 });

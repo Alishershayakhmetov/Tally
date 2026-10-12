@@ -20,6 +20,7 @@ import { formatDuration } from '@/domain/measure';
 import { countdownDisplay, elapsedMs, stepCountdown, type CountdownDisplay } from '@/domain/timer';
 import { now } from '@/lib/clock';
 import { confirmDestructive } from '@/lib/confirm';
+import { textOn } from '@/lib/contrast';
 import { goalReachedFeedback } from '@/lib/haptics';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { useNotificationPermission } from '@/notifications/scheduler';
@@ -163,7 +164,7 @@ export function TimerPanel({ task, disabled, defaultCountdown, onLogged }: Props
           style={[styles.primary, styles.stretch, { backgroundColor: task.color }]}
           accessibilityRole="button"
         >
-          <Text style={styles.primaryText}>
+          <Text style={[styles.primaryText, { color: textOn(task.color) }]}>
             {mode === 'countdown' ? `⏳ ${t('countdown.start')}` : `⏱ ${t('counter.start')}`}
           </Text>
         </Pressable>
@@ -227,7 +228,7 @@ export function TimerPanel({ task, disabled, defaultCountdown, onLogged }: Props
           style={[styles.primary, styles.grow, { backgroundColor: task.color }]}
           accessibilityRole="button"
         >
-          <Text style={styles.primaryText}>{t('counter.stop')}</Text>
+          <Text style={[styles.primaryText, { color: textOn(task.color) }]}>{t('counter.stop')}</Text>
         </Pressable>
       </View>
       <Pressable onPress={discard} hitSlop={8} accessibilityRole="button">

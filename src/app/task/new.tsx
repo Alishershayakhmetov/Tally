@@ -20,6 +20,7 @@ const BLANK: TaskFormValues = {
   measure: 'count',
   unitLabel: '',
   target: '',
+  targetUnit: 'format',
   increments: DEFAULT_INCREMENTS.join(', '),
   recurrence: 'none',
   weekdayMask: ALL_WEEKDAYS_MASK,

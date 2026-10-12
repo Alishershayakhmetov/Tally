@@ -1,0 +1,58 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Typing a time as a plain number of seconds, hours or minutes
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    file: subflows/create_from_template.yaml
+    env:
+      TEMPLATE: Plank
+
+# Pick the unit, then type a plain number: no m:ss needed.
+- tapOn: 'Enter amount…'
+- tapOn: 'Seconds'
+- inputText: '45'
+- tapOn:
+    id: amount-submit
+- assertVisible: '0:45'
+
+- tapOn: 'Enter amount…'
+- tapOn: 'Hours'
+- inputText: '0.5'
+- tapOn:
+    id: amount-submit
+- assertVisible: '30:45'
+
+# The format works as before. The keyboard switches back from the number pad
+# to letters here, so the flow waits for the field before typing.
+- tapOn: 'Enter amount…'
+- tapOn:
+    id: amount-input
+- inputText: '1:15'
+- tapOn:
+    id: amount-submit
+- assertVisible: '32:00'
+
+# The countdown length takes a unit too.
+- tapOn: 'Countdown'
+- tapOn: 'Countdown length 5:00'
+- tapOn: 'Seconds'
+- eraseText: 10
+- inputText: '90'
+- tapOn:
+    id: amount-submit
+- assertVisible: 'Countdown length 1:30'
+
+# So does a time goal's target.
+- tapOn: 'Edit'
+- scrollUntilVisible:
+    element: 'Hours'
+- tapOn: 'Hours'
+# 5:00 isn't a whole number of hours (to two decimals), so the field keeps it.
+- tapOn: '5:00'
+- eraseText: 10
+- inputText: '1.5'
+- scrollUntilVisible:
+    element: 'Save changes'
+- tapOn: 'Save changes'
+- assertVisible: '.*1:30:00.*'

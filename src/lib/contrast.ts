@@ -55,6 +55,21 @@ export function inkOn(background: string, light: string, dark: string): string {
   return contrastRatio(light, background) >= contrastRatio(dark, background) ? light : dark;
 }
 
+/** A colour from the picker as the stored task colour, #RRGGBB in capitals; null if it isn't one. */
+export function normalizeHex(color: string): string | null {
+  const match = /^#?([0-9a-f]{6})(?:[0-9a-f]{2})?$/i.exec(color.trim());
+  return match ? `#${match[1].toUpperCase()}` : null;
+}
+
+/**
+ * Text on a filled task colour (buttons, chips, badges). Tasks can have any
+ * colour, so white is only used when it reads better than near-black; every
+ * built-in task colour keeps white.
+ */
+export function textOn(color: string): string {
+  return inkOn(color, '#FFFFFF', '#111111');
+}
+
 /** How much of the top colour each heat-map step blends into the surface. */
 const RAMP_STEPS = [0.45, 0.62, 0.78, 1];
 

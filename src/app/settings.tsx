@@ -11,6 +11,8 @@ import { formatClock } from '@/domain/format';
 import type { WeekStartPref } from '@/domain/periods';
 import { clampDayStart, type LanguagePref, type ThemePref } from '@/domain/settings';
 import { BackupSection } from '@/features/backup/BackupSection';
+import { DropboxSection } from '@/features/sync/DropboxSection';
+import { syncSupported, useSyncState } from '@/features/sync/dropboxSync';
 import { setClockOffsetMs, useClockOffsetMs, useNow } from '@/lib/clock';
 import { tapFeedback } from '@/lib/haptics';
 import { useNotificationPermission } from '@/notifications/scheduler';
@@ -25,6 +27,7 @@ export default function SettingsScreen() {
   const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const settings = useSettings();
+  const sync = useSyncState();
   const weekdaysShort = t('date.weekdaysShort', { returnObjects: true }) as string[];
   const weekdaysLong = t('date.weekdaysLong', { returnObjects: true }) as string[];
 
@@ -91,9 +94,13 @@ export default function SettingsScreen() {
 
       <NotificationsRow />
 
+      {syncSupported ? <DropboxSection /> : null}
+
       <BackupSection />
 
-      <Text style={styles.note}>{t('settings.storage')}</Text>
+      <Text style={styles.note}>
+        {sync.status === 'connected' ? t('settings.storageDropbox') : t('settings.storage')}
+      </Text>
 
       {__DEV__ ? <DeveloperTools /> : null}
     </ScrollView>

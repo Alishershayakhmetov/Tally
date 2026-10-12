@@ -1,0 +1,33 @@
+appId: com.alishershayakhmetov.taskcounter
+name: Any icon from the picker and any colour
+---
+- launchApp:
+    clearState: true
+- tapOn: 'New task'
+- tapOn: 'Water, .*'
+
+# The icon picker has categories; a chosen icon joins the quick row, selected.
+- scrollUntilVisible:
+    element: 'More icons'
+- tapOn: 'More icons'
+- assertVisible: 'Choose an icon'
+- tapOn: 'Food'
+- tapOn: 'Icon 🍎'
+- assertVisible: 'Icon 🍎'
+
+# Any colour by HEX; it gets its own swatch next to the built-in ones.
+- tapOn: 'Pick any colour'
+- assertVisible: 'Pick a colour'
+# Typing a full HEX applies it at once.
+- tapOn: 'HEX colour'
+- eraseText: 10
+- inputText: 'FFE066'
+- tapOn: 'Choose #FFE066'
+- assertVisible: 'Colour #FFE066'
+
+- scrollUntilVisible:
+    element: 'Create task'
+- tapOn: 'Create task'
+- assertVisible: 'Enter amount…'
+- back
+- assertVisible: 'Water, .*'

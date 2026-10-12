@@ -34,7 +34,7 @@ import { buildTaskView, type TaskView } from '@/features/tasks/taskViews';
 import { formatDate, formatDay } from '@/i18n/format';
 import { useNow } from '@/lib/clock';
 import { confirmDestructive } from '@/lib/confirm';
-import { readableOn } from '@/lib/contrast';
+import { readableOn, textOn, visibleOn } from '@/lib/contrast';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { useWeekStart } from '@/lib/weekStart';
 import { radius, spacing, type Colors } from '@/theme';
@@ -187,7 +187,7 @@ function Counter({ view }: { view: TaskView }) {
           {hero.label ? <Text style={styles.window}>{hero.label}</Text> : null}
           <Text
             style={[styles.total, hero.total < 0 && { color: colors.danger }]}
-            accessibilityLabel={t('counter.total', { count: hero.total })}
+            accessibilityLabel={t('counter.total', { count: amount(hero.total) })}
           >
             {amount(hero.total)}
           </Text>
@@ -232,7 +232,11 @@ function Counter({ view }: { view: TaskView }) {
                 { flexBasis: columns === 2 ? '47%' : '30%' },
                 delta > 0
                   ? { backgroundColor: task.color }
-                  : { borderColor: task.color, borderWidth: 2, backgroundColor: colors.surface },
+                  : {
+                      borderColor: visibleOn(task.color, colors.surface),
+                      borderWidth: 2,
+                      backgroundColor: colors.surface,
+                    },
                 pressed && styles.pressed,
               ]}
               accessibilityRole="button"
@@ -242,11 +246,11 @@ function Counter({ view }: { view: TaskView }) {
                   : t('counter.subtract', { count: Math.abs(delta) })
               }${isTime ? ` ${t('counter.min')}` : ''}`}
             >
-              <Text style={[styles.padText, { color: delta > 0 ? '#FFFFFF' : accentText }]}>
+              <Text style={[styles.padText, { color: delta > 0 ? textOn(task.color) : accentText }]}>
                 {formatSigned(delta)}
               </Text>
               {isTime ? (
-                <Text style={[styles.padUnit, { color: delta > 0 ? '#FFFFFF' : accentText }]}>
+                <Text style={[styles.padUnit, { color: delta > 0 ? textOn(task.color) : accentText }]}>
                   {t('counter.min')}
                 </Text>
               ) : null}

@@ -219,7 +219,7 @@ WHERE task_id IN (:affected_task_ids);
 
 This re-groups thousands of entries in milliseconds. It's a local cache, so it **doesn't touch `updated_at`** and would never be synced.
 
-### 6.3 Sync-readiness rules (followed from day one, sync itself built later)
+### 6.3 Sync-readiness rules (followed from day one; sync built in Phase 9)
 1. **Client-generated UUIDs**, no autoincrement IDs, so rows created offline on two devices never collide.
 2. **`updated_at` on every row, `deleted_at` tombstones instead of hard deletes**, so a sync layer can compute "what changed since X" and propagate deletions.
 3. **Counters are sums of an append-mostly entry log**, not a stored number. Two devices logging +10 each merge to +20 with no conflict. A stored `count = 50` would need conflict resolution.
@@ -227,7 +227,7 @@ This re-groups thousands of entries in milliseconds. It's a local cache, so it *
 5. All DB access goes through a small **repository layer** (`src/db/repos`). Sync later hooks in there, not in screens.
 6. **Derived values are never synced.** That covers `local_date` and all totals. A second device recomputes them from the immutable `occurred_at` / `utc_offset_min` and its own settings. The per-task cutoff is a normal task field (last-write-wins). Whether the global default and week start should sync as account preferences is decided in the sync phase.
 
-Backend choice (Supabase, PowerSync, or a custom API) is **deliberately deferred** to the sync phase.
+Backend choice was deferred to the sync phase. Phase 9 chose **the user's own Dropbox**: no server or accounts of our own, and the merge rule is the backup's. The global settings (cutoff, week start, theme, language, vibration) sync like any other row, last-write-wins.
 
 ---
 
@@ -371,7 +371,7 @@ Each phase ends with verification **on the real Android phone**, not just "it co
 - **Done when:** unit tests cover summaries, goal rate (rest days, the period in progress), bar series (week start, month and year boundaries), axis steps (negative values, time), heat levels, and the colour ramp. On the phone the screen scrolls smoothly, and dragging across the chart doesn't fight the page scroll.
 
 ### Phase 5: order, templates, notes
-- **Reorder** (Home): a **Reorder** link above the active tasks (when there are 2 or more) switches to compact rows with **Move up / Move down** buttons, disabled at the ends. Finished/Archived sections and the New task button are hidden until **Done**.
+- **Reorder** (Home): a **Reorder** link above the active tasks (when there are 2 or more) switches to compact rows with **Move up / Move down** buttons, disabled at the ends. Finished/Archived sections and the New task button are hidden until **Done**. *(Replaced by drag and drop in Phase 8; the move rule below still applies.)*
   - A move gives only the moved task a new `sort_order`, the midpoint between its new neighbours (or one past the end). One changed row keeps future sync merges small.
   - If two neighbours share a value, or floating point runs out of room, the list is renumbered and only rows whose value changes are written.
 - **Templates** (New task): "Start from a template" lists a blank option and 8 built-in starters, translated into EN/RU:
@@ -467,10 +467,58 @@ Each phase ends with verification **on the real Android phone**, not just "it co
     - React Native's Gradle plugin ignores folders named `android/` or `ios/` when deciding whether to rebuild the JS bundle, so edits to the widget files at first shipped stale code. The widget files now live directly in `src/widgets/` (`AndroidWidget.tsx`, `androidTaskHandler.tsx`, `IosWidget.tsx`).
     - A widget row's deep link on a cold start opened the task with nothing underneath, so Back left the app. The root layout now sets `unstable_settings.anchor = 'index'`, so Home is always below.
 
+### Phase 8: order, icons, colours, keyboard (user feedback), added 2026-10-11
+- **Drag and drop** replaces the Reorder mode: hold a card on Home for 350 ms, then drag it (`react-native-sortables`, `Sortable.Grid` inside the Home scroll view, which auto-scrolls near the edges).
+  - On drop, `moveTo(from, to)` gives only the moved task a new `sort_order` between its new neighbours, the Phase 5 rule generalised from one step to any distance. Ties or exhausted precision renumber.
+  - A tap still opens the task. Cards in the grid use `Sortable.Touchable` so taps don't fight the drag gesture.
+  - Screen readers get "move up / move down" accessibility actions on each card instead of dragging.
+  - The vibration on pick-up follows the Vibration setting. A short hint under the list ("Hold a card to drag it…") shows once there are 2 or more active tasks.
+  - The root layout now wraps the app in `GestureHandlerRootView`. Modals with gestures (the colour picker) wrap their content in their own root, since a modal is a separate window on Android.
+- **Icons:** the quick row keeps the 10 built-ins, and **More…** opens `EmojiPickerDialog`.
+  - It has about 230 emoji in 9 categories (`domain/emoji.ts`), all Emoji 12 or older, so Android 10 and later draws them.
+  - **Typed emoji:** a field takes any emoji typed or pasted from the keyboard. `normalizeEmoji` accepts a short string containing an emoji (Extended_Pictographic, flags, keycaps) and rejects plain text. It falls back to a looser check if the JS engine lacks Unicode property escapes.
+  - Icons stay plain emoji strings, so badges, widgets and backups are unchanged. The typed field sits at the top of the dialog, so the keyboard doesn't cover it.
+- **Any colour:** a **+** swatch opens `ColorPickerDialog` (`reanimated-color-picker`).
+  - It has a saturation/brightness panel, a hue slider, the built-in colours as swatches, and its own HEX field, which applies a colour as soon as six hex digits are typed.
+  - Colours are stored as `#RRGGBB` (`normalizeHex`), the format backups already validate. A custom colour gets its own selected swatch.
+  - **Readability on any colour:** text on a filled task colour uses `textOn(color)` (white unless near-black reads better; every built-in colour keeps white). Progress bars and outlines in the task colour go through `visibleOn` (3:1 against the card), like chart marks.
+- **Keyboard:** the task form is a `KeyboardAwareScrollView` (`react-native-keyboard-controller`, the library Expo recommends; it's in Expo Go in SDK 57) under a `KeyboardProvider`. A focused field is scrolled above the keyboard with 96 dp to spare, so the counter-button preview under the field stays visible.
+- **Done when:** unit tests cover `moveTo` (any distance, drops in place, ties), the emoji catalog (no duplicates, every category, every emoji accepted), `normalizeEmoji`, `normalizeHex`, and `textOn` (white on all built-ins, readable on light custom colours).
+  - **Checked on the emulator (2026-10-11):** 7 Maestro flows pass. New flow 07 covers the icon picker and a HEX colour; flow 03 now covers the order, the hint and a tap that still opens the task.
+  - **By hand:** dragging the third card to the top (`adb shell input draganddrop`) moved it and survived a restart. The buttons field stayed above the keyboard with its preview. A light yellow (`#FFE066`) gave dark text on buttons and readable outlines.
+- **Found on the device:**
+  - The colour preview's text was hidden with `fontSize: 0`, which crashes Android ("FontSize should be a positive value"); it uses the library's `hideText` instead.
+  - The library's HEX widget lost typed text (the cursor landed mid-text and its 7-character limit cut the input), so the dialog has its own field.
+  - On the test emulator, every app launch (even the previous commit) stayed on the splash screen after the device date had been changed: the splash fade-out never finished. Setting the global animation scales again fixed it, and it didn't come back. It's an emulator state, not an app bug, and the README notes the fix.
+
+### Phase 9: time units, pace in seconds, sound, Dropbox sync (user feedback), added 2026-10-12
+- **Time in a unit:** every typed time (Enter amount, editing an entry, the countdown length, a time goal's target) gets a stacked `DurationUnitPicker` above the field: **h:mm:ss format** (the old input: `25` minutes, `m:ss`, `h:mm:ss`), **Hours**, **Minutes**, **Seconds**.
+  - It's the segmented control turned vertical: four labels don't fit one row on a phone.
+  - In a unit, the field takes a plain number with a dot or a comma (`1,5` for Russian keyboards) and an optional sign, rounded to whole seconds (`parseDurationIn`). The keyboard is the decimal pad; the ± button gives the sign.
+  - Switching units keeps a typed number as it is (it now means the new unit). A time with colons (an entry being edited) converts when the new unit shows it with at most two decimals (`1:30:00` → `1.5` hours), otherwise it stays as typed (`switchDurationUnit`).
+  - New error codes `numberInvalid` / `numberNotPositive` for a unit's number. The form keeps `targetUnit` next to `target`; a saved task always reopens in the format.
+  - The amount dialog now sits in a `KeyboardAvoidingView` (keyboard-controller follows the modal's own window) and scrolls inside the card, since the picker makes it taller than the space above the keyboard.
+- **Pace in seconds:** for time goals the need per day is rounded up to the second (was: up to the minute), and ahead/behind is in whole seconds (under one second counts as on pace, as under one unit does for counts).
+- **Sound:** reminders and the countdown alert set `sound: true`, each platform's standard sound: iOS's default alert sound, and on Android the channel's sound. The channels are created without a `sound`, which gives the phone's default notification sound (`Settings.System.DEFAULT_NOTIFICATION_URI`), changeable per channel in system settings. SDK 57 already played the default on both platforms when `sound` was unset; this makes it explicit. No sound files ship with the app.
+- **Dropbox sync** (Settings → Dropbox sync):
+  - **Sign-in:** OAuth 2 code flow with PKCE (S256) and `token_access_type=offline`, in the system browser (`expo-web-browser`'s auth session), redirecting to `taskcounter://dropbox-auth`. The app key is public and no secret ships. `+native-intent.tsx` stops Expo Router from treating the redirect as a screen. The refresh token is kept in `expo-secure-store`; the 4-hour access token only in memory, refreshed when it's within 5 minutes of expiry, and once more if Dropbox refuses it early.
+  - **The file:** `/tally-sync.json` in the app folder, the backup format (format 1) as compact JSON. A round: download (with its `rev`), merge with `importBackup` (the backup rule), and upload only if the file lacks a row or holds an older version (`remoteIsBehind`), with `mode: update` on that `rev` (`add` when there was no file). A conflict starts the round over, up to 3 times. A file that fails validation or is from a newer format is never overwritten.
+  - **When:** on launch, on returning to the foreground (unless synced in the last 30 s), 5 s after the last local change, and on going to the background with changes not yet up. One sync runs at a time; a request during one runs right after it. The merge's own data change doesn't trigger another sync.
+  - **Errors** show under the section: offline, Dropbox revoked the app (the connection is forgotten), missing permissions, rate limit, damaged or newer file. Disconnect revokes the token and keeps the phone's data and the file.
+- **Done when:** unit tests cover `parseDurationIn`, `switchDurationUnit`, unit-aware amount/target/countdown parsing, pace in seconds, `remoteIsBehind`, the sync round with two in-memory devices and a fake Dropbox (both-way merge, later edit wins, deletions, no upload when nothing changed, a conflict in the middle, giving up, never overwriting a bad file), the HTTP client against a faked `fetch` (authorize URL, code exchange, refresh revoked, download/not found, upload modes and conflict, error kinds), PKCE (RFC 7636 test vector, base64url), and the redirect hook.
+  - **Checked on the emulator (2026-10-12):** 8 Maestro flows pass. New flow 08 types amounts as seconds and hours, checks the format still works, and sets a countdown length and a target in a unit.
+  - **By hand:** in Russian, Minutes with `1,5` added +1:30. A weekly Plank goal showed "Need 9:40/day · 19:08 ahead of pace" (minute rounding would have said 10:00 and 19:00). `dumpsys notification` shows both channels (`reminders`, `timers`) with `content://settings/system/notification_sound`.
+  - **Dropbox, as far as it goes without signing in:** Connect opens the system browser (a Chrome custom tab). A redirect with the wrong state brings the app back to Settings with "Couldn't connect Dropbox", not to a blank screen. Backing out of the browser returns quietly. Dropbox accepts the app key (a fake code gets `invalid_grant`, not `invalid_client`). Its authorize page answers `invalid_redirect_uri` until `taskcounter://dropbox-auth` is added in the App Console. **Sign-in and sync with a real account haven't been run**: that needs the account owner to sign in.
+- **Found on the device:**
+  - The stacked picker made the amount dialog taller than the space above the keyboard, which pushed Add out of view. The buttons are now pinned to the bottom of the card, the field sits under the title, and the unit choice under the field (the task form uses the same order).
+  - Maestro lost the first typed character when the keyboard was switching from the number pad back to letters; the flow taps the field first. A person can't type that fast.
+  - The backup's `exportedAt` was UTC with a `Z` ("…T10:00:00.000Z"), which read as a wrong clock on a phone at +05:00. It's now the phone's local time with its offset (`2026-10-12T15:00:00+05:00`), the same instant, and old files still import (the field is only checked to be text).
+  - The counter's screen-reader label read a time total in seconds ("Total 2010"); it now reads it as shown (33:30).
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
-| Cloud sync + accounts | Needs a backend choice. The v1 schema is designed for it (§6.3). |
+| Background sync, other clouds | Phase 9 syncs through Dropbox while the app runs. Syncing with the app closed (background tasks), or through Google Drive / iCloud, would be separate work. |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
 | iOS build, Play Store release | Not needed for a portfolio. Needs developer accounts. |
 | Multiple simultaneous timers | Edge case. One timer covers realistic use. |

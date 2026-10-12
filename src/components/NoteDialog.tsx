@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { textOn } from '@/lib/contrast';
 import { useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
 
@@ -58,7 +59,7 @@ export function NoteDialog({ subtitle, initial, suggestions, color, onSave, onCl
               style={[styles.primary, { backgroundColor: color }]}
               accessibilityRole="button"
             >
-              <Text style={styles.primaryText}>{t('common.save')}</Text>
+              <Text style={[styles.primaryText, { color: textOn(color) }]}>{t('common.save')}</Text>
             </Pressable>
           </View>
         </View>

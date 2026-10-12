@@ -103,6 +103,8 @@ describe('translations', () => {
       'dayStartInvalid',
       'countdownInvalid',
       'countdownTooLong',
+      'numberInvalid',
+      'numberNotPositive',
     ];
     expect(Object.keys(en.errors).sort()).toEqual([...codes].sort());
   });

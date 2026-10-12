@@ -13,6 +13,7 @@ export function taskFormValues(task: Task): TaskFormValues {
     measure: task.measure,
     unitLabel: task.unitLabel ?? '',
     target: task.measure === 'duration' ? formatDuration(task.target) : String(task.target),
+    targetUnit: 'format',
     increments: task.increments.join(', '),
     recurrence: task.recurrence,
     weekdayMask: task.weekdayMask ?? ALL_WEEKDAYS_MASK,

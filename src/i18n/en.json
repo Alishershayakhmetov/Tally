@@ -25,11 +25,9 @@
     "openSettings": "Settings",
     "timerBanner": "Stopwatch · {{name}} · {{time}}",
     "countdownBanner": "Countdown · {{name}} · {{time}}",
-    "reorder": "Reorder",
-    "reorderDone": "Done",
-    "reorderHint": "Use the arrows to change the order.",
     "moveUp": "Move {{name}} up",
-    "moveDown": "Move {{name}} down"
+    "moveDown": "Move {{name}} down",
+    "dragHint": "Hold a card to drag it to a new place."
   },
   "today": {
     "progress_one": "{{done}} of {{count}} daily goal done",
@@ -121,6 +119,34 @@
     "axisMin": "{{n}} min",
     "axisHours": "{{n}} h"
   },
+  "sync": {
+    "title": "Dropbox sync",
+    "hint": "Tasks, entries and settings are kept in one file, tally-sync.json, in the app’s folder in your Dropbox (Apps). Connect the same account on another device and both merge: new things are added, and when the same thing changed in both places, the later change wins.",
+    "connect": "Connect Dropbox",
+    "connecting": "Waiting for Dropbox…",
+    "connected": "Connected",
+    "account": "Connected: {{account}}",
+    "never": "Not synced yet",
+    "last": "Synced {{time}}",
+    "pulled": "brought in tasks +{{tasksAdded}} · entries +{{entriesAdded}} · updated {{updated}}",
+    "syncNow": "Sync now",
+    "syncing": "Syncing…",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect Dropbox?",
+    "disconnectMessage": "This phone stops syncing. Its data stays, and so does the file in Dropbox for your other devices.",
+    "problems": {
+      "network": "No connection to Dropbox. Changes will go up at the next sync.",
+      "revoked": "Dropbox no longer lets Tally in. Connect again.",
+      "scope": "The Dropbox app lacks file permissions (files.content.read and files.content.write).",
+      "rateLimit": "Dropbox asked to slow down. Try again in a minute.",
+      "server": "Dropbox didn’t answer properly. Try again later.",
+      "fileInvalid": "The sync file in Dropbox is damaged, so nothing was changed. Delete tally-sync.json in Dropbox to start over from this phone.",
+      "newerFormat": "The sync file was written by a newer Tally. Update the app on this phone.",
+      "conflict": "Other devices kept syncing at the same moment. Try again.",
+      "signInFailed": "Couldn’t connect Dropbox. Try again.",
+      "failed": "Sync failed. Try again later."
+    }
+  },
   "backup": {
     "title": "Backup",
     "export": "Export",
@@ -193,6 +219,25 @@
     "areaHint": "This set: {{n}}",
     "done": "Done"
   },
+  "duration": {
+    "unit": "How to type the time",
+    "units": {
+      "format": "h:mm:ss format",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "seconds": "Seconds"
+    },
+    "hints": {
+      "hours": "A number of hours, e.g. 1.5.",
+      "minutes": "A number of minutes, e.g. 25.",
+      "seconds": "A number of seconds, e.g. 45."
+    },
+    "placeholders": {
+      "hours": "e.g. 1.5",
+      "minutes": "e.g. 25",
+      "seconds": "e.g. 45"
+    }
+  },
   "amount": {
     "title": "Enter amount",
     "editTitle": "Edit entry",
@@ -233,6 +278,8 @@
     "dayStartHint": "Logs before this time count for the previous day. Changing it re-groups this task’s history.",
     "icon": "Icon",
     "iconLabel": "Icon {{emoji}}",
+    "iconMore": "More icons",
+    "iconMoreShort": "More…",
     "color": "Colour",
     "colorLabel": "Colour {{color}}",
     "buttons": "Counter buttons",
@@ -264,6 +311,33 @@
     "minuteEarlier": "Earlier minutes",
     "minuteLater": "Later minutes"
   },
+  "icons": {
+    "title": "Choose an icon",
+    "custom": "Your own emoji",
+    "customPlaceholder": "Type or paste any emoji",
+    "use": "Use",
+    "invalid": "That isn't an emoji.",
+    "none": "No icon",
+    "categories": {
+      "sport": "Sport",
+      "health": "Health",
+      "food": "Food",
+      "study": "Study",
+      "work": "Work",
+      "home": "Home",
+      "hobbies": "Hobbies",
+      "nature": "Nature",
+      "symbols": "Symbols"
+    }
+  },
+  "colorPicker": {
+    "title": "Pick a colour",
+    "choose": "Choose",
+    "open": "Pick any colour",
+    "panel": "Saturation and brightness",
+    "hue": "Hue",
+    "hex": "HEX colour"
+  },
   "errors": {
     "amountNotInteger": "Enter a whole number, e.g. 37 or -5",
     "amountZero": "Amount cannot be 0",
@@ -285,7 +359,9 @@
     "durationTargetInvalid": "Target must be a time above 0, e.g. 60 or 1:00:00",
     "reminderInvalid": "Pick a time",
     "countdownInvalid": "Enter a time above 0, e.g. 5 or 1:30",
-    "countdownTooLong": "At most 24 hours"
+    "countdownTooLong": "At most 24 hours",
+    "numberInvalid": "Enter a number, e.g. 45 or 1.5",
+    "numberNotPositive": "Enter a number above 0, e.g. 45 or 1.5"
   },
   "history": {
     "empty": "Nothing logged yet.",
@@ -305,6 +381,7 @@
     "vibration": "Vibration",
     "vibrationHint": "Vibrate when you log progress and when a goal is reached.",
     "storage": "Your data is stored only on this device.",
+    "storageDropbox": "Your data is stored on this device and in your Dropbox.",
     "developer": "Developer",
     "clock": "Simulated time: {{time}}",
     "clockOffset": "Offset: {{hours}} h",

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { orderedWeekdays, weekdayBit, type Weekday } from '@/domain/periods';
-import { readableOn } from '@/lib/contrast';
+import { readableOn, textOn } from '@/lib/contrast';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { radius, type Colors } from '@/theme';
 
@@ -37,7 +37,7 @@ export function WeekdayPicker({ mask, weekStart, accent, onToggle }: Props) {
             <Text
               style={[
                 styles.label,
-                { color: on ? '#FFFFFF' : readableOn(accent, colors.surface, colors.text) },
+                { color: on ? textOn(accent) : readableOn(accent, colors.surface, colors.text) },
               ]}
             >
               {short[day]}

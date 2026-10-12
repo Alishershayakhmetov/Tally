@@ -8,6 +8,7 @@ import {
   type BackupTask,
   type MergeSummary,
 } from '@/domain/backup';
+import { deviceUtcOffsetMin } from '@/domain/days';
 
 import { getDb } from './client';
 import { notifyDataChanged } from './live';
@@ -34,6 +35,7 @@ export function readBackup(at: Date): Backup {
       settings: db.select().from(settings).all(),
     },
     at,
+    deviceUtcOffsetMin(at),
   );
 }
 

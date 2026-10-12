@@ -30,6 +30,13 @@ const COUNTDOWN_ID = 'countdown';
 /** Android caps pending alarms per app at 500. */
 const MAX_SCHEDULED = 400;
 const REFRESH_DEBOUNCE_MS = 800;
+/**
+ * Every notification plays the platform's standard sound, and the app ships no
+ * sound files: iOS's default alert sound, and on Android the channel's sound.
+ * A channel created without a `sound` gets the phone's default notification
+ * sound, which the user can change per channel in system settings.
+ */
+const SYSTEM_SOUND = true;
 
 export const remindersSupported = Platform.OS !== 'web';
 
@@ -149,6 +156,7 @@ async function replan(): Promise<void> {
       content: {
         title: task.emoji ? `${task.emoji} ${task.name}` : task.name,
         body: bodyFor(task, plan),
+        sound: SYSTEM_SOUND,
         data: { taskId: task.id },
       },
       trigger: {
@@ -186,6 +194,7 @@ function countdownAlert(): CountdownAlert | null {
     content: {
       title: task.emoji ? `${task.emoji} ${task.name}` : task.name,
       body: i18n.t('countdown.doneBody', { time: formatDuration(Math.round(active.countdownMs / 1000)) }),
+      sound: SYSTEM_SOUND,
       data: { taskId: task.id },
     },
   };

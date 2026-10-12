@@ -3,9 +3,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { openDatabase } from '@/db/client';
 import { getSettings, useSettings } from '@/db/settings';
+import { startSync } from '@/features/sync/dropboxSync';
 import i18n, { resolveLanguage } from '@/i18n';
 import { useColors } from '@/lib/theme';
 import { startReminders } from '@/notifications/scheduler';
@@ -47,7 +50,15 @@ export default function RootLayout() {
       </View>
     );
   }
-  return <AppShell />;
+  // Gestures (drag to reorder, the colour picker) need the gesture root; the
+  // keyboard provider lets forms scroll the focused field above the keyboard.
+  return (
+    <GestureHandlerRootView style={styles.root}>
+      <KeyboardProvider>
+        <AppShell />
+      </KeyboardProvider>
+    </GestureHandlerRootView>
+  );
 }
 
 function AppShell() {
@@ -70,6 +81,9 @@ function AppShell() {
 
   // Home-screen widgets follow every data change (and, on iOS, hand over their presses).
   useEffect(() => startWidgets(), []);
+
+  // With Dropbox connected, changes go up and other devices' changes come down.
+  useEffect(() => startSync(), []);
 
   const navigationTheme = useMemo(() => {
     const base = colors.scheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -111,6 +125,9 @@ function AppShell() {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   center: {
     flex: 1,
     alignItems: 'center',

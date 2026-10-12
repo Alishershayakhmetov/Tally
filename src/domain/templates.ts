@@ -113,6 +113,7 @@ export function templateForm(
     measure: template.measure,
     unitLabel: template.measure === 'duration' ? '' : text.unit,
     target: String(template.target),
+    targetUnit: 'format',
     increments: template.increments.join(', '),
     recurrence: template.recurrence,
     weekdayMask: ALL_WEEKDAYS_MASK,

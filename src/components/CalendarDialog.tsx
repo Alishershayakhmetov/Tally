@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { addMonths, monthGrid, orderedWeekdays, type Weekday } from '@/domain/periods';
+import { textOn } from '@/lib/contrast';
 import { useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
 
@@ -79,7 +80,11 @@ export function CalendarDialog({ visible, value, minDate, weekStart, accent, onS
                     accessibilityLabel={date}
                   >
                     <Text
-                      style={[styles.day, disabled && styles.dayDisabled, selected && styles.daySelected]}
+                      style={[
+                        styles.day,
+                        disabled && styles.dayDisabled,
+                        selected && [styles.daySelected, { color: textOn(accent) }],
+                      ]}
                     >
                       {Number(date.slice(8))}
                     </Text>
@@ -158,7 +163,6 @@ function makeStyles(c: Colors) {
       opacity: 0.4,
     },
     daySelected: {
-      color: '#FFFFFF',
       fontWeight: '700',
     },
   });
