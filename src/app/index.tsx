@@ -1,12 +1,12 @@
 import { router, Stack } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Sortable from 'react-native-sortables';
 
-import { TaskCard } from '@/components/TaskCard';
+import { TaskCard, WEB_DRAG_HANDLE } from '@/components/TaskCard';
 import { TodaySummary } from '@/components/TodaySummary';
 import { useLive } from '@/db/live';
 import { getTask, reorderTasks } from '@/db/repos/tasks';
@@ -44,7 +44,12 @@ export default function HomeScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => router.push('/settings')} hitSlop={12} accessibilityRole="button">
+            <Pressable
+              onPress={() => router.push('/settings')}
+              hitSlop={12}
+              accessibilityRole="button"
+              style={styles.headerButton}
+            >
               <Text style={styles.headerAction}>{t('home.openSettings')}</Text>
             </Pressable>
           ),
@@ -81,11 +86,15 @@ export default function HomeScreen() {
           )}
           onDragEnd={({ fromIndex, toIndex }) => reorderTasks(moveTo(order(), fromIndex, toIndex))}
           scrollableRef={scrollableRef}
-          dragActivationDelay={DRAG_DELAY_MS}
+          {...DRAG_PROPS}
           activeItemScale={1.03}
+          // One column: the card moves up and down only, not sideways out of the list.
+          overDrag="vertical"
           hapticsEnabled={settings.vibration}
         />
-        {active.length >= 2 ? <Text style={styles.dragHint}>{t('home.dragHint')}</Text> : null}
+        {active.length >= 2 ? (
+          <Text style={styles.dragHint}>{t(WEB_DRAG_HANDLE ? 'home.dragHintHandle' : 'home.dragHint')}</Text>
+        ) : null}
         <Section title={t('home.finished')} views={finished} initiallyOpen />
         <Section title={t('home.archived')} views={archived} initiallyOpen={false} />
       </Animated.ScrollView>
@@ -107,6 +116,13 @@ export default function HomeScreen() {
 
 /** A press this long picks a card up; shorter presses scroll the list or open the task. */
 const DRAG_DELAY_MS = 350;
+
+// A phone picks a card up after a long press. With a mouse the card is dragged by its
+// handle (customHandle), which starts at once however fast the pointer moves: people
+// press and pull in one motion, and a hold delay would cancel that.
+const DRAG_PROPS = WEB_DRAG_HANDLE
+  ? { customHandle: true, dragActivationDelay: 0, dragActivationFailOffset: 10_000 }
+  : { dragActivationDelay: DRAG_DELAY_MS };
 
 /** A running stopwatch or countdown stays visible from Home so it's never forgotten. */
 function TimerBanner() {
@@ -190,6 +206,10 @@ function makeStyles(c: Colors) {
       color: c.primary,
       fontSize: 16,
       fontWeight: '600',
+    },
+    // The web header leaves the right button against the window's edge (the native one pads it).
+    headerButton: {
+      marginRight: Platform.OS === 'web' ? spacing.lg : 0,
     },
     list: {
       padding: spacing.lg,

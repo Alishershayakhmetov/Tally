@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { HorizontalScroll } from '@/components/HorizontalScroll';
 import { EMOJI_CATEGORIES, normalizeEmoji, type EmojiCategoryId } from '@/domain/emoji';
 import { textOn, visibleOn } from '@/lib/contrast';
 import { useColors, useThemedStyles } from '@/lib/theme';
@@ -77,12 +78,7 @@ export function EmojiPickerDialog({ value, color, onSelect, onClose }: Props) {
           </View>
           {invalid ? <Text style={styles.error}>{t('icons.invalid')}</Text> : null}
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabs}
-            accessibilityRole="tablist"
-          >
+          <HorizontalScroll contentContainerStyle={styles.tabs} accessibilityRole="tablist">
             {EMOJI_CATEGORIES.map((c) => (
               <Pressable
                 key={c.id}
@@ -96,7 +92,7 @@ export function EmojiPickerDialog({ value, color, onSelect, onClose }: Props) {
                 </Text>
               </Pressable>
             ))}
-          </ScrollView>
+          </HorizontalScroll>
 
           <ScrollView style={styles.gridScroll} contentContainerStyle={styles.grid}>
             {emojis.map((emoji) => (

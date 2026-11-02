@@ -193,6 +193,11 @@ export function parseBackup(text: string): ParsedBackup {
   } catch {
     return { ok: false, error: 'notJson' };
   }
+  return parseBackupValue(raw);
+}
+
+/** For callers that already hold the parsed JSON (the sync file is parsed once to tell its format). */
+export function parseBackupValue(raw: unknown): ParsedBackup {
   if (typeof raw !== 'object' || raw === null) return { ok: false, error: 'notBackup' };
   const file = raw as Record<string, unknown>;
   if (file.app !== BACKUP_APP || !isInt(file.format)) return { ok: false, error: 'notBackup' };

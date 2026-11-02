@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -25,3 +28,27 @@ jobs:
           test -z "$(git status --porcelain drizzle)"
       - name: Android bundle builds
         run: npx expo export --platform android --output-dir dist
+
+  # The Windows app: with desktop/ installed, the database tests that `check` skips run against
+  # better-sqlite3, and the web build the app ships is exported. (Electron's own window is driven
+  # by `npm run e2e` in desktop/, which needs a display, so it isn't run here.)
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - run: npm ci
+      - name: Install the Windows app's dependencies (without Electron's binary)
+        run: npm ci --prefix desktop
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Database tests through the desktop bridge
+        run: npx jest --ci src/desktop
+      - name: Web build for the Windows app
+        run: npm run build:web --prefix desktop

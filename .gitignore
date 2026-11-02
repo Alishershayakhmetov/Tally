@@ -13,10 +13,14 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
+local.properties
+*.apk
+*.aab
 
 # Metro
 .metro-health-check*
@@ -30,14 +34,23 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (.env.example is the one to commit)
+.env
 .env*.local
+
+# Claude Code: personal settings and local permissions
+.claude/
+
+# tests
+coverage/
 
 # typescript
 *.tsbuildinfo
 
-example
-
 # generated native folders
 /ios
 /android
+
+# Windows app (desktop/): its web build and installers (its node_modules is covered above)
+/desktop/web/
+/desktop/release/

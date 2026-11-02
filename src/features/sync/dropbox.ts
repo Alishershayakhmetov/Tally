@@ -1,3 +1,4 @@
+import { httpFetch, REDIRECT_URI } from './env';
 import type { RemoteFile } from './engine';
 
 // Dropbox over plain HTTPS (no SDK). Sign-in is OAuth 2 with PKCE, so the app
@@ -5,8 +6,13 @@ import type { RemoteFile } from './engine';
 // in the Dropbox App Console with "App folder" access and the
 // files.content.read / files.content.write permissions, and this redirect URI.
 
-export const DROPBOX_APP_KEY = 'yonuwxw6yypcgfh';
-export const DROPBOX_REDIRECT_URI = 'taskcounter://dropbox-auth';
+/**
+ * The author's Dropbox app. To use your own, set EXPO_PUBLIC_DROPBOX_APP_KEY (in .env, see
+ * .env.example): Expo inlines it when the app is bundled, so it must be written exactly like this.
+ */
+export const DROPBOX_APP_KEY = process.env.EXPO_PUBLIC_DROPBOX_APP_KEY || 'yonuwxw6yypcgfh';
+/** Where the sign-in comes back to: a URL scheme on the phone, a local address in the Windows app. */
+export const DROPBOX_REDIRECT_URI = REDIRECT_URI;
 
 const AUTHORIZE_URL = 'https://www.dropbox.com/oauth2/authorize';
 const TOKEN_URL = 'https://api.dropboxapi.com/oauth2/token';
@@ -79,7 +85,7 @@ export function parseAuthRedirect(url: string, expectedState: string): AuthRedir
 
 async function send(url: string, init: RequestInit): Promise<Response> {
   try {
-    return await fetch(url, init);
+    return await httpFetch(url, init);
   } catch (error) {
     throw new DropboxError('network', error instanceof Error ? error.message : String(error));
   }

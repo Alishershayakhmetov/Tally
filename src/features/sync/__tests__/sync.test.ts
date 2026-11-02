@@ -1,10 +1,10 @@
-import { createBackup, planMerge, type Backup, type BackupEntry, type BackupTask } from '@/domain/backup';
-import { backupVersions, serializeSyncFile } from '@/domain/sync';
+import { serializeSyncFile } from '@/domain/sync';
 
 import { redirectSystemPath } from '../../../app/+native-intent';
 import {
   authorizeUrl,
   downloadFile,
+  DROPBOX_APP_KEY,
   DROPBOX_REDIRECT_URI,
   DropboxError,
   exchangeCode,
@@ -13,7 +13,8 @@ import {
   refreshAccess,
   uploadFile,
 } from '../dropbox';
-import { SyncError, syncOnce, type RemoteFile, type SyncLocal, type SyncRemote } from '../engine';
+import { SyncError, syncOnce } from '../engine';
+import { Device, FakeDropbox, backup, entry, ids, task } from '../__fakes__/fakes';
 import { base64Url, challengeFor } from '../pkce';
 
 jest.mock('expo-crypto', () => ({
@@ -26,103 +27,6 @@ jest.mock('expo-crypto', () => ({
 
 // ---------------------------------------------------------------------------
 // Two devices and a Dropbox, all in memory
-
-function task(id: string, updatedAt: number, extra: Partial<BackupTask> = {}): BackupTask {
-  return {
-    id,
-    name: id,
-    emoji: null,
-    color: '#2563EB',
-    measure: 'count',
-    unitLabel: null,
-    target: 100,
-    recurrence: 'none',
-    weekdayMask: null,
-    startDate: '2026-10-01',
-    endDate: null,
-    increments: [1],
-    reminderTime: null,
-    dayStartMin: null,
-    sortOrder: 1,
-    archivedAt: null,
-    createdAt: 1,
-    updatedAt,
-    deletedAt: null,
-    ...extra,
-  };
-}
-
-function entry(id: string, taskId: string, amount: number, updatedAt: number): BackupEntry {
-  return {
-    id,
-    taskId,
-    amount,
-    source: 'button',
-    occurredAt: 1_790_000_000_000,
-    utcOffsetMin: 0,
-    note: null,
-    createdAt: updatedAt,
-    updatedAt,
-    deletedAt: null,
-  };
-}
-
-/** A phone's database: merging applies the backup's rule, like importBackup does. */
-class Device implements SyncLocal {
-  constructor(public data: Backup) {}
-
-  read(): Backup {
-    return JSON.parse(JSON.stringify(this.data)) as Backup;
-  }
-
-  merge(remote: Backup) {
-    const plan = planMerge(remote, backupVersions(this.data));
-    const upsert = <T, K>(rows: T[], incoming: T[], key: (row: T) => K) => {
-      const out = new Map(rows.map((row) => [key(row), row]));
-      for (const row of incoming) out.set(key(row), row);
-      return [...out.values()];
-    };
-    this.data = {
-      ...this.data,
-      tasks: upsert(this.data.tasks, plan.tasks, (t) => t.id),
-      entries: upsert(this.data.entries, plan.entries, (e) => e.id),
-      settings: upsert(this.data.settings, plan.settings, (s) => s.key),
-    };
-    return plan.summary;
-  }
-}
-
-class FakeDropbox implements SyncRemote {
-  file: RemoteFile | null = null;
-  revs = 0;
-  uploads = 0;
-  conflicts = 0;
-  /** Runs right before an upload is checked, to let "another device" get in first. */
-  beforeUpload: (() => void) | null = null;
-
-  async download() {
-    return this.file && { ...this.file };
-  }
-
-  async upload(text: string, rev: string | null) {
-    this.beforeUpload?.();
-    if ((this.file?.rev ?? null) !== rev) {
-      this.conflicts++;
-      return 'conflict' as const;
-    }
-    this.uploads++;
-    this.file = { text, rev: `rev-${++this.revs}` };
-    return 'ok' as const;
-  }
-}
-
-const backup = (rows: Partial<Pick<Backup, 'tasks' | 'entries' | 'settings'>>) =>
-  createBackup({ tasks: [], entries: [], settings: [], ...rows }, new Date('2026-10-12T10:00:00Z'));
-
-const ids = (device: Device) => ({
-  tasks: device.data.tasks.map((t) => `${t.id}@${t.updatedAt}`).sort(),
-  entries: device.data.entries.map((e) => `${e.id}:${e.amount}`).sort(),
-});
 
 describe('syncOnce', () => {
   it('creates the file from the first device', async () => {
@@ -236,7 +140,7 @@ describe('Dropbox sign-in', () => {
   it('asks for a code with PKCE and a refresh token, coming back to the app', () => {
     const params = queryParams(authorizeUrl('CHALLENGE', 'STATE'));
     expect(Object.fromEntries(params)).toEqual({
-      client_id: 'yonuwxw6yypcgfh',
+      client_id: DROPBOX_APP_KEY,
       response_type: 'code',
       redirect_uri: 'taskcounter://dropbox-auth',
       code_challenge: 'CHALLENGE',
@@ -288,7 +192,7 @@ describe('Dropbox sign-in', () => {
       code: 'CODE',
       grant_type: 'authorization_code',
       code_verifier: 'VERIFIER',
-      client_id: 'yonuwxw6yypcgfh',
+      client_id: DROPBOX_APP_KEY,
       redirect_uri: 'taskcounter://dropbox-auth',
     });
   });

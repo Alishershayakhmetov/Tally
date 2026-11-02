@@ -1,9 +1,16 @@
 {
-  "name": "task_counter_app",
+  "name": "tally",
+  "description": "Tally: a local-first goal counter for Android, iOS and Windows, with optional encrypted Dropbox sync.",
+  "license": "MIT",
   "main": "index.ts",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=24"
+  },
   "dependencies": {
     "@expo/ui": "~57.0.21",
+    "@noble/ciphers": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "drizzle-orm": "^0.45.3",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",
@@ -78,7 +85,12 @@
     "preset": "jest-expo",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
-    }
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@noble))",
+      "/node_modules/react-native-reanimated/plugin/",
+      "/node_modules/@react-native/babel-preset/"
+    ]
   },
   "expo": {
     "autolinking": {

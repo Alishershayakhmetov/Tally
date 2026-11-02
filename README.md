@@ -1,10 +1,21 @@
 # Tally
 
-A local-first mobile app for counting toward self-set goals: _"1000 push-ups"_, _"100 squats"_. Create a task, tap to log progress, and see how far you are from the target. All data lives in SQLite on the device.
+A local-first app for counting toward self-set goals: _"1000 push-ups"_, _"100 squats"_. Create a task, tap to log progress, and see how far you are from the target. All data lives in SQLite on the device. It runs on Android and as a Windows program; the iOS code paths (the home-screen widget) exist but have never been built.
 
 Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle ORM over `expo-sqlite`. The full design, decisions and phased plan are in [SPEC.md](SPEC.md).
 
-## Status: Phases 0–9
+<p align="center">
+  <img src="docs/images/home.png" width="24%" alt="Home: today's goals with their progress" />
+  <img src="docs/images/counter.png" width="24%" alt="A goal's counter screen with the quick buttons" />
+  <img src="docs/images/statistics.png" width="24%" alt="Statistics: tiles and a 30-day chart" />
+  <img src="docs/images/home-dark.png" width="24%" alt="Home in the dark theme" />
+</p>
+
+<sub>Screenshots of the Windows app in a phone-sized window, with made-up data: the screens are the phone's.</sub>
+
+**Where to start:** [run it on an Android phone](#run-it-on-your-android-phone) · [build an APK](#build-an-installable-apk) · [the Windows app](#windows-app) · [Dropbox sync setup](#dropbox-sync-setup) · [known limitations](#known-limitations) · [the full spec](SPEC.md)
+
+## Status: Phases 0–11
 
 **Counting (Phase 0)**
 
@@ -93,6 +104,18 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
   - A file that can't be read (damaged, or from a newer Tally) is never overwritten.
   - Disconnecting keeps the data on the phone and the file in Dropbox.
 
+**Windows app (Phase 10)**: the same app as an installable `.exe`. See [Windows app](#windows-app) below.
+
+**Encrypted sync (Phase 11)**: a sync password for the file in Dropbox.
+
+- **Encryption…** in Settings → Dropbox sync opens a window that says what the feature does and what happens to the file already in Dropbox. Type a password twice (at least 8 characters, a phrase is better) and the sync file is encrypted on the device before it's uploaded, so nobody who can see your Dropbox, Dropbox included, can read your tasks and history. **Leave the fields empty and nothing is encrypted**, as before. Leave them empty while encryption is on and it's turned off.
+- **The file that's already there** (`tally-sync.json`, unencrypted) is read and merged first, so nothing is lost, then replaced in place by the encrypted one. Dropbox keeps earlier versions of a file for a while (30 days or more, depending on the plan), so the old unencrypted ones stay readable there until they expire; the window says so, and says where to delete them (dropbox.com, version history and deleted files). Backups made with **Export** are separate files and aren't encrypted.
+- **Other devices** stop syncing, and say so, until you enter the same password on each: Settings shows "Enter password…". A wrong password is refused without changing anything. Changing the password on one device asks the others for the new one.
+- **Forgot it?** There's no recovery: the password isn't kept anywhere, only the key derived from it, on the devices where you entered it. But each device keeps all of its own data, so **I forgot the password** in that window replaces the file in Dropbox with this device's data under a new password (or none). The other devices then ask for the new password and add their data back.
+- If the file in Dropbox turns up **unencrypted on a device that expects encryption** (turned off elsewhere, or someone replaced the file), that device does not merge it. It stops and offers **Encrypt it again** or **Stop encrypting here**.
+- Key derivation takes a few seconds on a phone (scrypt, 16 MiB; about 4 s in the Android emulator), once per device when the password is entered, with a progress indicator. Syncing itself then takes about a quarter of a second per 700 KB of history.
+- Details, the file format and the measurements are in SPEC Phase 11.
+
 ## Build an installable APK
 
 The `preview` profile in `eas.json` builds a standalone APK in Expo's cloud (free tier). It needs your own Expo account, and it uploads the project to Expo's build servers:
@@ -107,7 +130,7 @@ npx eas-cli@latest build -p android --profile preview
 
 `eas.json` pins the build server to Node 24.13.0 (npm 11), the same versions that write `package-lock.json` locally. With EAS's default (Node 22, npm 10), `npm ci` rejects the lockfile: npm 11 leaves out `@emnapi/core` and `@emnapi/runtime`, which are peer dependencies of an optional WebAssembly package, and npm 10 requires them. If you upgrade Node locally, update the pin to match.
 
-The first build offers to create the EAS project and to generate an Android signing key; accept both. When it finishes, it prints a link and a QR code for downloading the APK to the phone. The Android package is `com.alishershayakhmetov.taskcounter` (in `app.json`); change it before any store release if you want a different one.
+`app.json` carries the author's EAS project ID (`extra.eas.projectId`), which only the author's Expo account can build. **For your own copy, delete that `extra.eas` block and run `npx eas-cli@latest init`** to create your own project; the first build then offers to generate an Android signing key (accept). When it finishes, it prints a link and a QR code for downloading the APK to the phone. The Android package and iOS bundle identifier are the author's too, `com.alishershayakhmetov.taskcounter` (in `app.json`); change them to your own before any store release.
 
 ## Run it on your Android phone
 
@@ -140,18 +163,65 @@ npx expo start --tunnel
 | `npm run e2e:build`   | Build a release APK and install it on the emulator        |
 | `npm run e2e`         | Run the Maestro end-to-end flows in `.maestro/`           |
 
-CI (`.github/workflows/ci.yml`) runs typecheck, lint, format check and tests. It also fails if the schema changed without a migration, and it bundles the app for Android.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, format check and tests. It also fails if the schema changed without a migration, and it bundles the app for Android. A second job, on Windows, runs the Windows app's database tests (which the first job skips, because `desktop/` isn't installed there) and exports its web build.
 
 ## Dropbox sync setup
 
-The app talks to Dropbox through an app registered in the [Dropbox App Console](https://www.dropbox.com/developers/apps) (the app key is in `src/features/sync/dropbox.ts`). Sign-in uses OAuth 2 with PKCE, so the app holds no secret. The app needs:
+The app talks to Dropbox through an app registered in the [Dropbox App Console](https://www.dropbox.com/developers/apps). Sign-in uses OAuth 2 with PKCE, so the app holds no secret, and the app key is public by design.
+
+The key built into the code (`src/features/sync/dropbox.ts`) belongs to the author's app. **For your own copy, register your own app and use its key**: copy `.env.example` to `.env` and set `EXPO_PUBLIC_DROPBOX_APP_KEY=<your key>`. Expo bakes the value in when the app is bundled, so restart the dev server or rebuild after changing it. Otherwise your sign-ins count toward the author's app's limit, and sync stops if that app is ever removed. Your app needs:
 
 - **Access type:** App folder.
 - **Permissions** tab: `files.content.read` and `files.content.write` (then **Submit**). Tokens issued before a permission change don't get it; disconnect and connect again.
-- **Settings → OAuth 2 → Redirect URIs:** `taskcounter://dropbox-auth`. Without it, Dropbox shows "Invalid redirect_uri" instead of its sign-in page.
+- **Settings → OAuth 2 → Redirect URIs:** add both `taskcounter://dropbox-auth` (the phone) and `http://localhost:53682/dropbox-auth` (the Windows app), each with **Add**. Without the right one, Dropbox shows "Invalid redirect_uri" instead of its sign-in page.
 - **Allow public clients (Implicit Grant & PKCE):** Allow.
 
 While the Dropbox app is in development status, up to 500 Dropbox accounts can connect it; more need Dropbox's production approval.
+
+## Windows app
+
+`desktop/` is the same app as a Windows program. It's the app's web build (`expo export --platform web`) in an Electron window, so the screens, features and translations are the phone's. Two things differ, because a web page can't do them: SQLite lives in Electron's main process (`better-sqlite3`, the same SQL and migrations), and Dropbox sign-in goes through your default browser.
+
+**Run and build** (needs Node 24; no Visual Studio, because `better-sqlite3` ships a prebuilt binary):
+
+```bash
+cd desktop
+```
+
+```bash
+npm install
+```
+
+```bash
+npm run build:web
+```
+
+```bash
+npm start
+```
+
+```bash
+npm run dist
+```
+
+- `build:web` exports the web build into `desktop/web/` (with `TALLY_DESKTOP=1`, which makes Metro swap `expo-sqlite` for `src/desktop/sqlite.ts`; phones and a plain web build are untouched). `start` opens it in Electron.
+- `dist` does `build:web` and then packs `desktop/release/`: an installer, `Tally-Setup-<version>.exe` (per user, no admin rights, a folder of your choice), and `Tally-<version>-portable.exe`, which runs without installing. Each is 110–120 MB, because each contains Chromium.
+- The installers aren't code-signed, so Windows SmartScreen says "Windows protected your PC" the first time: **More info → Run anyway**. Signing needs a certificate bought from a certificate authority.
+
+**Where things are**
+
+- Data: `%APPDATA%\Tally\task-counter.db` (SQLite, WAL), the same schema as the phone. Back it up from Settings → Backup, or sync it with Dropbox.
+- The Dropbox token: `%APPDATA%\Tally\secrets.json`, encrypted with Windows' DPAPI (Electron's `safeStorage`), so it only opens for your Windows user.
+
+**What works:** everything counting-related: tasks, goals, history, statistics, pace and streaks, templates, notes, countdown and stopwatch (visible while the app is open), drag-to-reorder with the mouse (by the dots on a card's left edge) or the keyboard (Alt+↑ / Alt+↓ on a focused card), the emoji and colour pickers, time input in hours/minutes/seconds, backup export (a Save As window) and import, and Dropbox sync. The layout is a centred column up to 720 px wide. The two sideways rows (templates, icon categories) scroll with the mouse wheel and have a scrollbar.
+
+**What doesn't (yet):** reminders and the countdown's 0:00 alert (Windows notifications need their own scheduler, and the app would have to keep running), home-screen widgets, and vibration (the switch is hidden). Settings says so where it applies.
+
+**Dropbox sign-in in the Windows app** works without a URL scheme: Tally opens Dropbox in your browser and listens for a moment on `http://localhost:53682/dropbox-auth` (loopback only), where Dropbox sends the browser back. Port 53682 must be free; if another program has it, Tally says so. The page the browser lands on says it's done and can be closed. **Cancel** stops the wait. Requests to Dropbox are made by Electron's main process, which only talks to `api.dropboxapi.com` and `content.dropboxapi.com`.
+
+**Tests:** `npm run e2e` in `desktop/` starts the app with a throwaway data folder, drives its window with `playwright-core` (it attaches to Electron, so no browser is downloaded) and checks: creating and counting, data kept across a restart, dragging by the handle (also when the pull starts at once), a click and Enter each opening a task once, the wheel scrolling the template row and the icon tabs, a task page being centred, with its header button off the window's edge, export/import with the local time offset, the Dropbox sign-in redirect and Cancel, the bridge's limits, and the whole sync between two app instances against a fake Dropbox (`desktop/e2e/fakeDropbox.mjs`, which answers as Dropbox's API does), encryption included: turning it on, a second device asked for the password, changing it, turning it off, starting over. Run `npm run build:web` first, and add `-- --exe release/win-unpacked/Tally.exe` to test the packaged app. Dropbox itself is never contacted by the tests, so they work offline; the real sign-in and real uploads are the part nobody has tried.
+
+**Safety:** the window has no Node access (`contextIsolation`, `sandbox`), loads only `app://tally/` from the app's own files with a Content-Security-Policy, opens links in your browser, and denies every permission request. Only that page can call the main process's few functions (database, secrets, Dropbox requests, Save As).
 
 ## End-to-end tests (Maestro)
 
@@ -233,13 +303,19 @@ assets/         icon.svg (the icon master) and the PNGs exported from it: launch
 
 ## Known limitations
 
-- **Web is not supported.** `expo-sqlite` 57.0.3's web build (alpha) truncates any synchronous result longer than 255 bytes: `web/WorkerChannel.ts` writes the result length with `Uint8Array.set(new Uint32Array([length]))`, which keeps only `length % 256`. Android and iOS use the native module and aren't affected. The Metro `wasm` setting and the cross-origin headers in `app.json` are kept for when this is fixed upstream. Web also needs cross-origin isolation, which `npx expo start` doesn't currently send.
-- Verified so far in a browser (with that bug patched locally) and by unit tests. **Not yet run on a real phone**, so Android-only behaviour is unconfirmed: notifications firing, haptics, keeping the screen on, the system dark-mode switch, and `Intl.PluralRules` on Hermes (polyfilled if missing).
+- **A plain browser is not supported**, but the Windows app (above) runs the web build with SQLite swapped for `better-sqlite3`. `expo-sqlite` 57.0.3's web build (alpha) truncates any synchronous result longer than 255 bytes: `web/WorkerChannel.ts` writes the result length with `Uint8Array.set(new Uint32Array([length]))`, which keeps only `length % 256`. Android and iOS use the native module and aren't affected. The Metro `wasm` setting and the cross-origin headers in `app.json` are kept for when this is fixed upstream. Web also needs cross-origin isolation, which `npx expo start` doesn't currently send.
+- Verified so far by unit tests, by the Maestro flows on an Android emulator (a release build), and by the Windows app's end-to-end checks. **Not yet run on a real phone**, so Android-only behaviour is unconfirmed: notifications firing, haptics, keeping the screen on, the system dark-mode switch, and `Intl.PluralRules` on Hermes (polyfilled if missing).
 - **Reminders** don't exist on web. On Android they use inexact alarms, so they can arrive a few minutes late (exact alarms need a special permission that Android 14 denies by default). They're planned two weeks ahead, so if the app isn't opened for two weeks, they stop until it is.
 - **The countdown's 0:00 alert** has the same limit when Tally is closed or the phone is locked: it can arrive late. While the app is open (the counter screen keeps the screen on while a timer runs), the app posts the alert itself, on time.
+- **Windows app:** unsigned (SmartScreen warns once), 110–120 MB, no reminders, countdown alert or widgets, and no automatic updates: install the new installer over the old one, and the data stays. Only Windows x64 is built; the same Electron code would run on macOS and Linux, but nothing is packaged or tried there.
+- **Encrypted sync:** a forgotten password can't be recovered (start over from a device that has the data). A weak password is weak however it's stored: scrypt at this cost slows guessing but doesn't stop it, so use a long phrase. The size and times of the file are visible to Dropbox, and anyone who can write to your Dropbox can delete or replace the file (a replacement is detected, never silently trusted). Old unencrypted versions stay in Dropbox's history for a while.
 - **Dropbox sync** runs only while Tally is open (no background sync), so a change made with the app closed (a widget press on Android) goes up the next time the app runs. The whole file goes up and down each time, which is fine for a personal history but grows with it. "Later edit wins" compares the devices' clocks, so a device with a wrong clock can win when it shouldn't. Sign-in and sync against the real Dropbox haven't been run yet, only against fakes in tests (SPEC Phase 9).
 - Header actions ("Settings", "Edit") are text buttons; no icon set is installed.
 - **Widgets** need a native build: Expo Go has neither widget module, so there the app runs without them.
   - **Android:** tested on the emulator (see SPEC Phase 7), not yet on a phone. The widget picker shows its English label and the app icon instead of a preview image.
   - **iOS:** can't be built on Windows. It needs a Mac, or an EAS iOS build with an Apple Developer account: the widget shares data through an App Group (`group.com.alishershayakhmetov.taskcounter`), which needs provisioning.
   - **iOS presses** are logged only when the app next runs, so reminders don't know about them until then. A press made in the few milliseconds while the app replaces the widget's timeline is lost.
+
+## License
+
+[MIT](LICENSE), © 2026 Alisher Shayakhmetov.

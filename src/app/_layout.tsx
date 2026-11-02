@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
@@ -103,30 +103,47 @@ function AppShell() {
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={colors.scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.background },
-          headerShadowVisible: false,
-          headerTintColor: colors.text,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen name="index" options={{ title: t('screens.home') }} />
-        <Stack.Screen name="settings" options={{ title: t('screens.settings') }} />
-        <Stack.Screen name="task/new" options={{ title: t('screens.newTask'), presentation: 'modal' }} />
-        <Stack.Screen name="task/[id]/index" options={{ title: '' }} />
-        <Stack.Screen name="task/[id]/edit" options={{ title: t('screens.editTask') }} />
-        <Stack.Screen name="task/[id]/history" options={{ title: t('screens.history') }} />
-        <Stack.Screen name="task/[id]/stats" options={{ title: t('screens.stats') }} />
-        <Stack.Screen name="task/[id]/tap" options={{ title: t('screens.tap') }} />
-      </Stack>
+      <View style={[styles.frame, { backgroundColor: colors.background }]}>
+        <View style={styles.column}>
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: colors.background },
+              headerShadowVisible: false,
+              headerTintColor: colors.text,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
+            <Stack.Screen name="index" options={{ title: t('screens.home') }} />
+            <Stack.Screen name="settings" options={{ title: t('screens.settings') }} />
+            <Stack.Screen name="task/new" options={{ title: t('screens.newTask'), presentation: 'modal' }} />
+            <Stack.Screen name="task/[id]/index" options={{ title: '' }} />
+            <Stack.Screen name="task/[id]/edit" options={{ title: t('screens.editTask') }} />
+            <Stack.Screen name="task/[id]/history" options={{ title: t('screens.history') }} />
+            <Stack.Screen name="task/[id]/stats" options={{ title: t('screens.stats') }} />
+            <Stack.Screen name="task/[id]/tap" options={{ title: t('screens.tap') }} />
+          </Stack>
+        </View>
+      </View>
     </ThemeProvider>
   );
 }
 
+// On a computer the phone layout would stretch across the whole window, so the
+// content is a centred column instead. On a phone the column is the screen.
+const MAX_CONTENT_WIDTH = 720;
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  frame: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  column: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? MAX_CONTENT_WIDTH : undefined,
   },
   center: {
     flex: 1,

@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmountDialog } from '@/components/AmountDialog';
@@ -147,6 +147,7 @@ function Counter({ view }: { view: TaskView }) {
               onPress={() => router.push({ pathname: '/task/[id]/edit', params: { id: task.id } })}
               hitSlop={12}
               accessibilityRole="button"
+              style={styles.headerButton}
             >
               <Text style={styles.headerAction}>{t('common.edit')}</Text>
             </Pressable>
@@ -385,6 +386,10 @@ function makeStyles(c: Colors) {
       color: c.primary,
       fontSize: 16,
       fontWeight: '600',
+    },
+    // The web header leaves the right button against the window's edge (the native one pads it).
+    headerButton: {
+      marginRight: Platform.OS === 'web' ? spacing.lg : 0,
     },
     content: {
       padding: spacing.lg,

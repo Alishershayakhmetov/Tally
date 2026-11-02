@@ -1,6 +1,6 @@
 # Tally: Specification
 
-> Status: **Phases 0–5 built** (browser-verified; not yet run on a phone) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
+> Status: **Phases 0–11 built** (unit tests, 8 Maestro flows on an Android emulator, 19 end-to-end checks of the Windows app; not yet run on a real phone or against the real Dropbox) · Drafted 2026-09-29 · Rev. 2 same day (week start setting, negative counters, day-start setting) · Rev. 3 (per-task day start, history re-groups when a cutoff changes)
 > Name: *Tally* (working title was *Task Counter*)
 
 A cross-platform mobile app for self-set counting goals: *"Do 1000 push-ups"*, *"100 squats every day"*, *"Plank 60 minutes this month"*. You create a task, log progress with quick buttons or a stopwatch, and see how far you are from the target. **All data lives on the device first.** The data model is designed so cloud sync can be added later without a rewrite.
@@ -515,9 +515,87 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - The backup's `exportedAt` was UTC with a `Z` ("…T10:00:00.000Z"), which read as a wrong clock on a phone at +05:00. It's now the phone's local time with its offset (`2026-10-12T15:00:00+05:00`), the same instant, and old files still import (the field is only checked to be text).
   - The counter's screen-reader label read a time total in seconds ("Total 2010"); it now reads it as shown (33:30).
 
+### Phase 10: Windows app, added 2026-10-12
+- **Decision:** the app's own web build in an Electron window, not a rewrite or React Native Windows. Everything but the storage and the Dropbox sign-in is shared with the phone. Windows x64 only; the same code would run elsewhere but isn't packaged.
+- **Layout:** `desktop/` has its own `package.json` (electron 44, electron-builder, better-sqlite3 13), kept out of the Expo project's dependencies. `main.js` + `src/` (main process), `preload.js` (the bridge), `scripts/build-web.mjs`, `build/icon.png`. The Expo side has `src/desktop/` (`bridge.ts`, `sqlite.ts`).
+- **Web build:** `expo export --platform web` with `TALLY_DESKTOP=1`, into `desktop/web/`. The window serves it from `app://tally/` through `protocol.handle` (a single-page app: unknown paths without an extension fall back to `index.html`), with a Content-Security-Policy (`script-src 'self'`, no network access of its own).
+- **SQLite:** `expo-sqlite` on web (alpha) is broken (README, Known limitations), so Metro swaps it for `src/desktop/sqlite.ts` when `TALLY_DESKTOP=1` (`resolver.resolveRequest`, web only).
+  - The stand-in offers what Drizzle's expo-sqlite driver and the app use: `openDatabaseAsync`, `prepareSync` / `executeSync` / `executeForRawResultSync`, `runSync`, `getAllSync`, `execSync` / `execAsync`. Each call is one **synchronous IPC** (`ipcRenderer.sendSync` in the preload) to the main process, which runs it on better-sqlite3 and returns the rows whole. The app's synchronous query style, `useLive`, repositories and migrations are untouched.
+  - **Integer binding:** better-sqlite3 binds a JS number that isn't an int32 as REAL. Whole numbers are bound as BigInt, so `occurred_at / 1000` and `created_at` stay integer arithmetic and typed INTEGER. Named parameters lose their `:`/`@`/`$` prefix, as better-sqlite3 wants.
+  - Statements are cached by SQL text (up to 300). WAL is switched on in the main process.
+  - The preload answers `{ value }` or `{ error }` for every call, so a failing statement throws in the page instead of hanging it.
+- **Dropbox on the desktop:** the sync engine, the Dropbox client and PKCE are shared. What differs is behind two platform files (`env.web.ts`, `platform.web.ts`; the phone's are `env.ts`, `platform.ts`):
+  - **Secrets:** the refresh token goes to the main process, encrypted with Windows' DPAPI (`safeStorage`) into `secrets.json` in the user data folder.
+  - **Sign-in:** a custom URL scheme would need registry entries from an installer, so the redirect is `http://localhost:53682/dropbox-auth`. The main process listens on 127.0.0.1 (and `::1` if available) for one request that has `code` or `error`, answers a small "you can close this tab" page (English and Russian), and hands the URL to the page, which checks `state` as on the phone and exchanges the code. The sign-in times out after 5 minutes, a Cancel button stops it, and an occupied port is reported. The page is opened in the default browser with `shell.openExternal`, and only for `https://www.dropbox.com/oauth2/authorize?…`.
+  - **Requests:** made by the main process (`net.fetch`), only to `api.dropboxapi.com` and `content.dropboxapi.com`, so the page needs no CORS and no network access of its own.
+  - The Dropbox App Console needs the second redirect URI (README).
+- **Mouse and keyboard (found by the first real use of the app, 2026-10-13):**
+  - **Reordering:** hold-to-drag (350 ms, cancelled by any move beyond 5 px) doesn't suit a mouse: people press and pull in one motion, so nothing happened unless the card was held still for about half a second. On web the Home grid uses `customHandle`: each card has a handle (a six-dot grip, `Sortable.Handle`) on its left edge, `dragActivationDelay` 0 and a huge `dragActivationFailOffset`, so a drag starts at once however fast the pointer moves. The card body no longer drags and a click still opens it. A phone keeps the long press. Keyboard: Alt+↑ / Alt+↓ on a focused card moves it (`onKeyDown`, which react-native-web passes on although React Native's types lack it); Enter opens it through the browser's own click on the card's `<button>` (a handler of ours opened it twice). The hint text on Home says so (`home.dragHintHandle`).
+  - **Sideways rows:** the template picker and the icon categories were horizontal ScrollViews, which a wheel can't move. `HorizontalScroll` (`.web.tsx`) shows the scrollbar and turns the wheel's vertical movement into sideways scrolling, leaving the wheel alone at either end so the page behind still scrolls.
+  - **Off-centre content:** a classic scrollbar takes about 9 px on the right of a scrolling page, so everything centred on it (the emoji, total, goal text) sat 4–5 px left of the window's centre. The window's CSS reserves the same room on the left (`scrollbar-gutter: stable both-edges` on react-native-web's `overflow-y: auto` class, `.r-1rnoaur`), and the centre is now within 0.3 px. Tried and dropped: Chromium's Fluent overlay scrollbars (the switch made the scrollbar wider, not overlaid).
+  - **Header button against the edge (found 2026-11-02, taking README screenshots):** on web the stack header leaves its right button (Home's Settings, a task's Edit) flush with the window's edge, where the native header pads it. Both now carry a `marginRight` of `spacing.lg` on web only; the centring check in `desktop/e2e` also asserts the gap is at least 12 px (it was 0).
+  - `npm run e2e` in `desktop/` covers all of these.
+- **Other differences:** the Settings screen hides Vibration on web. Backup export opens the system's Save As window through the main process and is cancellable (`shareBackupFile` now returns whether it saved). Settings' notifications row says the phone app is needed. Content is a centred column up to 720 px. `overDrag="vertical"` keeps a dragged card inside the single column: on web the card otherwise centred itself under the pointer and slid out of the list.
+- **Safety:** `contextIsolation`, `sandbox`, no Node in the page, navigation limited to `app://tally/` (other `https` links open in the browser), every permission request denied, a single-instance lock, and every IPC handler checks that the caller's frame is `app://tally/`.
+- **Data:** always `%APPDATA%/Tally` (`task-counter.db`, `secrets.json`), whether run from source or installed.
+- **Build:** `npm run dist` in `desktop/` gives `Tally-Setup-<version>.exe` (NSIS, per user, choice of folder) and `Tally-<version>-portable.exe`, 110–120 MB each. `npmRebuild` is off: better-sqlite3 ships a prebuilt N-API binary for win32-x64, so no compiler is needed (none is installed here). The `.node` file is unpacked from the asar. Not code-signed.
+- **Not in this phase:** reminders and the countdown alert (Windows notifications need a scheduler that lives while the app runs, plus a tray), widgets, auto-update, code signing.
+- **Done when:** the Windows window's behaviour is checked by `desktop/e2e/run.mjs` (11 checks, below), and the app's real Drizzle layer, migrations and repositories pass through the stand-in and better-sqlite3 in Jest (`src/desktop/__tests__/sqlite.test.ts`: migrate, integer typing, named parameters re-grouping entries, a two-device import in one transaction, a rollback on a foreign-key failure, binding rules). It is skipped where `desktop/node_modules` is missing.
+  - **Checked in the window (2026-10-12, driven over the debugging port with Playwright):** creating tasks from templates, counting, data kept after a restart, drag-to-reorder with the mouse, the icon and colour pickers, the unit picker in the amount dialog, export (the file's `exportedAt` is local time with the offset) and import, the Dropbox sign-in up to the exchange of a made-up code (Dropbox's own `invalid_grant` came back through the main process), a wrong `state` refused, Cancel closing the local server, requests to other hosts refused, the encrypted secrets round trip, and a 1280 px wide window. The packaged `Tally.exe` (from `win-unpacked`) was run too: it loaded from the asar, opened the database through the unpacked binary, and kept data across a restart.
+  - **Not checked:** sign-in and sync with a real Dropbox account (needs the account owner), the installer itself (not installed on this PC), and SmartScreen's behaviour.
+- **Found on the way:**
+  - A heredoc with quotes made the shell fail on a long file, so the main-process files were written with the editor tool instead.
+  - Drag on web centred the card under the pointer; fixed with `overDrag="vertical"`.
+  - The packaged app's data folder would have depended on how it is started (Electron names it after `package.json`), so it's set explicitly.
+
+### Phase 11: encrypted sync, added 2026-10-13
+Asked for: a password; all synced data encrypted with a key from it; an empty field means no encryption; a button whose window explains the function and what to do with the previous files.
+
+- **The button** is **Encryption…** in Settings → Dropbox sync (**Enter password…** while the cloud file needs one). Its window (`EncryptionDialog`) has three faces:
+  - **set:** a password and its repeat, an explanation, and what becomes of the file already in Dropbox, depending on what's there now (`inspectCloud`: none, plain, or unknown/offline). With encryption on, it's change (new password) or turn off (both fields empty; the button says so and turns red).
+  - **enter:** the cloud file is encrypted and this device has no (or an old) password. One field. A wrong password is refused and nothing is stored.
+  - **reset ("I forgot the password"):** replace the cloud file with this device's data, under a new password or none.
+- **What happens to the previous file** (the part the request left to me):
+  - A plain `tally-sync.json` is **read and merged first, then replaced in place** by the encrypted one under the same name, with the usual revision check. Nothing from other devices that only the cloud holds is lost.
+  - Dropbox's own **version history keeps the earlier plain versions** (30 days or more, plan dependent; the API can't purge them outside Dropbox Business), so the window says they stay readable until they expire and where to delete them.
+  - **Exported backups** are separate files and unchanged; the window says they aren't encrypted. An encrypted Export is a possible later feature.
+  - **Other devices** are blocked, not broken: they stop with a message instead of overwriting anything, and each needs the password once.
+  - **Turning it off** merges the encrypted file and writes a plain one. Older versions in Dropbox's history stay encrypted, and open with the password of their time.
+- **Cryptography** (`domain/syncCrypto.ts`, `domain/bytes.ts`), all plain JS from the audited `@noble/ciphers` and `@noble/hashes`, so the phone, the Windows app and the tests run the same code:
+  - **Key:** scrypt (RFC 7914) of the NFKC-normalised password, N = 2^14, r = 8, p = 1, a random 16-byte salt, 32 bytes. The cost travels in the file header, so it can be raised later; a file may not ask for more than 64 MiB or less than N = 2^12. Checked against Node's own scrypt.
+  - **Cipher:** XChaCha20-Poly1305 (24-byte random nonces, no nonce-reuse worries; constant-time in JS). The data is cut into 64 KiB chunks so a large history is sealed and opened in slices with the app responsive.
+  - **Envelope** (format 2; the plain sync file is format 1, so an older Tally says "written by a newer Tally" and leaves it alone): `{ "app":"tally", "format":2, "encrypted": { cipher, kdf, N, r, p, salt, chunk, chunks:[base64(nonce ‖ ciphertext ‖ tag)] } }`. Each chunk authenticates the whole header, its index and the chunk count, so a changed parameter or a swapped, dropped, repeated or truncated chunk is detected.
+  - **One salt per password**, constant across uploads: the derived key is kept on the device, so the slow derivation runs once, when the password is entered. The file never changes salt unless the password does, which is also how another device notices a changed password.
+  - **Measured in Hermes** (Android emulator, release build): scrypt 2^12 0.9 s, 2^14 3.7 s, 2^15 7.3 s; sealing 719 KiB 0.23 s, opening it 0.30 s (about 3 MB/s). A phone is slower, so 2^14 is the default. `TextEncoder`, `TextDecoder` and `String.normalize` exist there; the by-hand UTF-8 fallbacks are tested anyway.
+- **What a device remembers** (`EncryptionRecord`, in the keystore beside the Dropbox token: expo-secure-store, or DPAPI in the Windows app; never in the database, which is exported): the derived key, not the password. Two keys: `current` (what the cloud file is sealed with) and `target` (what it should be). A change sets `target`; when a sync has left the cloud file in that form, `current` catches up. So an interrupted change just runs again. `replace` marks "start over". A half-readable record is reported as damaged, never read as "encryption off" (that would upload a plain file).
+- **The sync round** (`engine.ts`, `SyncPolicy { read, write, replace }`):
+
+  | The cloud file is | This device | Result |
+  |---|---|---|
+  | none | any | upload in the `write` form |
+  | plain | no key | merge, upload in the `write` form (turning encryption on re-seals it even if nothing else changed) |
+  | plain | expects encryption | **stop: `cloudNotEncrypted`**, nothing merged (anyone with write access could plant a plain file); unless it is turning encryption off |
+  | encrypted, salt matches a key | has it | decrypt, merge, upload only if needed |
+  | encrypted | no key | **stop: `passwordRequired`**, nothing touched |
+  | encrypted, salt differs | has an old key | **stop: `passwordChanged`** |
+  | encrypted, salt matches but the data won't open | has the key | `fileInvalid`, never overwritten |
+  | anything, `replace` set | any | ignore its content, overwrite (against the revision just downloaded) |
+
+  After a stop that needs a decision, automatic syncs wait (`blocked`); **Sync now** or any of the resolving actions tries again. Disconnecting forgets the key.
+- **Password rules:** empty means none; otherwise 8 to 256 characters, typed twice; compared after NFKC so the same word typed on another keyboard gives the same key. (The minimum is my choice, not asked for.)
+- **Done when:** 47 new unit tests: base64 and UTF-8 against Node, scrypt against Node's, sealing and opening from empty to many chunks, every kind of tampering, malformed or oversized envelopes, and the encryption record (`phase11.test.ts`, `encryption.test.ts`, `encryptionRecord.test.ts`); the engine run with two in-memory devices through every transition above, including a racing upload and starting over.
+  - **Windows app, end to end (2026-10-13):** `desktop/e2e` now runs two app instances against a **fake Dropbox** (`e2e/fakeDropbox.mjs`, which answers as Dropbox's documented API does, reached through `TALLY_TEST_DROPBOX_ORIGIN`): plain sync, turning encryption on (the file in "Dropbox" shows none of the task names, and its history still holds the plain version, as the window says), a second device asked for the password and refusing a wrong one, changes both ways with the same salt, changing the password, turning it off, a device told its cloud file isn't encrypted, starting over, disconnecting. 19 checks pass, from source and as the packaged `Tally.exe`. The fake is not real Dropbox: the real sign-in and real uploads are still untried.
+  - **Android (emulator):** the window renders; with the keyboard open the field scrolls into view and the pinned error and buttons stay above the keyboard; the key derivation, its saving in the keystore and the closing of the window ran end to end. The 8 Maestro flows pass. A connected account isn't available there, so the sync part runs only in unit tests and the Windows app.
+- **Found on the way:**
+  - `KeyboardAwareScrollView` turned the first tap on a pinned button into "close the keyboard" on Android, so a tap on Encrypt did nothing; the dialog uses a plain ScrollView and scrolls to its fields itself, like the amount dialog.
+  - The error line sat under the fields, below the visible part once the keyboard was open, so a mismatch looked like a dead button. Errors and progress are now pinned above the buttons.
+  - A scrypt cost of 2^15 took 7.3 s in Hermes on the emulator, hence 2^14.
+- **Not done:** an encrypted Export; a password strength meter; changing the cost on existing files; and trying real Dropbox.
+
 ### Later (explicitly **not** in v1)
 | Feature | Why deferred |
 |---|---|
+| Reminders and widgets on Windows, other desktops | Phase 10 is Windows x64 only, with no reminders. macOS / Linux would need packaging, and notifications need a long-running scheduler. |
 | Background sync, other clouds | Phase 9 syncs through Dropbox while the app runs. Syncing with the app closed (background tasks), or through Google Drive / iCloud, would be separate work. |
 | Combined goal ("1000 total **and** 50/day") | Doubles the progress UI complexity. Revisit if it's actually wanted. |
 | iOS build, Play Store release | Not needed for a portfolio. Needs developer accounts. |

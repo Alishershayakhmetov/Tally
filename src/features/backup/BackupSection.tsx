@@ -36,7 +36,12 @@ export function BackupSection() {
         const at = new Date(now());
         // The calendar date on this phone (cutoff 00:00), not a task's logical day.
         const fileName = backupFileName(currentLogicalDate(at, 0));
-        await shareBackupFile(fileName, serializeBackup(readBackup(at)), t('backup.dialogTitle'));
+        const saved = await shareBackupFile(
+          fileName,
+          serializeBackup(readBackup(at)),
+          t('backup.dialogTitle'),
+        );
+        if (!saved) return null;
         return { kind: 'ok', text: t('backup.exported', { file: fileName }) };
       } catch (error) {
         console.warn('Backup export failed', error);

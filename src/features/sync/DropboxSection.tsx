@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -8,23 +9,35 @@ import { confirmDestructive } from '@/lib/confirm';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
 
-import { connectDropbox, disconnectDropbox, requestSync, useSyncState, type SyncState } from './dropboxSync';
+import {
+  cancelSignIn,
+  connectDropbox,
+  disconnectDropbox,
+  encryptCloudAgain,
+  stopEncryptingHere,
+  syncNow,
+  useSyncState,
+  type SyncState,
+} from './dropboxSync';
+import { EncryptionDialog } from './EncryptionDialog';
 
-/** Settings → Dropbox sync: connect, the last sync, sync now, disconnect. */
+/** Settings → Dropbox sync: connect, the last sync, sync now, encryption, disconnect. */
 export function DropboxSection() {
   const { t } = useTranslation();
   const styles = useThemedStyles(makeStyles);
   const colors = useColors();
   const sync = useSyncState();
+  const [encryptionOpen, setEncryptionOpen] = useState(false);
 
   async function disconnect() {
-    const confirmed = await confirmDestructive(
-      t('sync.disconnectTitle'),
-      t('sync.disconnectMessage'),
-      t('sync.disconnect'),
-    );
+    const message = sync.encryption.on
+      ? `${t('sync.disconnectMessage')} ${t('sync.disconnectEncrypted')}`
+      : t('sync.disconnectMessage');
+    const confirmed = await confirmDestructive(t('sync.disconnectTitle'), message, t('sync.disconnect'));
     if (confirmed) await disconnectDropbox();
   }
+
+  const needsPassword = sync.problem === 'passwordRequired' || sync.problem === 'passwordChanged';
 
   return (
     <View style={styles.section}>
@@ -43,9 +56,19 @@ export function DropboxSection() {
             <ActionButton
               label={sync.busy === 'syncing' ? t('sync.syncing') : t('sync.syncNow')}
               disabled={sync.busy !== null}
-              onPress={requestSync}
+              onPress={syncNow}
             />
             <ActionButton label={t('sync.disconnect')} disabled={sync.busy !== null} onPress={disconnect} />
+          </View>
+          <Text style={styles.status}>
+            {t('sync.encryption')}: {encryptionLabel(t, sync)}
+          </Text>
+          <View style={styles.buttons}>
+            <ActionButton
+              label={needsPassword ? t('sync.enterPassword') : t('sync.encryptionButton')}
+              disabled={sync.busy !== null}
+              onPress={() => setEncryptionOpen(true)}
+            />
           </View>
         </>
       ) : (
@@ -55,6 +78,9 @@ export function DropboxSection() {
             disabled={sync.busy !== null}
             onPress={() => void connectDropbox()}
           />
+          {sync.busy === 'connecting' && cancelSignIn ? (
+            <ActionButton label={t('common.cancel')} disabled={false} onPress={cancelSignIn} />
+          ) : null}
         </View>
       )}
       {sync.problem ? (
@@ -62,7 +88,22 @@ export function DropboxSection() {
           {t(`sync.problems.${sync.problem}`)}
         </Text>
       ) : null}
+      {sync.problem === 'cloudNotEncrypted' ? (
+        <View style={styles.buttons}>
+          <ActionButton
+            label={t('sync.encryptAgain')}
+            disabled={sync.busy !== null}
+            onPress={() => void encryptCloudAgain()}
+          />
+          <ActionButton
+            label={t('sync.stopEncrypting')}
+            disabled={sync.busy !== null}
+            onPress={() => void stopEncryptingHere()}
+          />
+        </View>
+      ) : null}
       <Text style={styles.hint}>{t('sync.hint')}</Text>
+      {encryptionOpen ? <EncryptionDialog onClose={() => setEncryptionOpen(false)} /> : null}
     </View>
   );
 }
@@ -70,6 +111,13 @@ export function DropboxSection() {
 function accountText(account: NonNullable<SyncState['account']>): string {
   if (account.name && account.email) return `${account.name} (${account.email})`;
   return account.name || account.email;
+}
+
+/** "Off", "On", or what the next sync will do about it. */
+function encryptionLabel(t: ReturnType<typeof useTranslation>['t'], sync: SyncState): string {
+  const { on, pending } = sync.encryption;
+  if (on) return t(pending ? 'sync.encryptionOnPending' : 'sync.encryptionOn');
+  return t(pending ? 'sync.encryptionOffPending' : 'sync.encryptionOff');
 }
 
 /** "Synced today, 14:05 · brought in 3 entries" or "Not synced yet". */

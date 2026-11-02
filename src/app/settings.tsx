@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Segmented } from '@/components/Segmented';
@@ -59,16 +59,19 @@ export default function SettingsScreen() {
         />
       </Row>
 
-      <SwitchRow
-        label={t('settings.vibration')}
-        hint={t('settings.vibrationHint')}
-        value={settings.vibration}
-        onChange={(value) => {
-          updateSetting('vibration', value);
-          // A sample buzz confirms it works; turning it off stays silent.
-          tapFeedback();
-        }}
-      />
+      {/* A computer can't vibrate. */}
+      {Platform.OS === 'web' ? null : (
+        <SwitchRow
+          label={t('settings.vibration')}
+          hint={t('settings.vibrationHint')}
+          value={settings.vibration}
+          onChange={(value) => {
+            updateSetting('vibration', value);
+            // A sample buzz confirms it works; turning it off stays silent.
+            tapFeedback();
+          }}
+        />
+      )}
 
       <Row label={t('settings.weekStart')}>
         <Segmented<WeekStartPref>

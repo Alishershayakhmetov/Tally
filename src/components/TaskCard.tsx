@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View, type AccessibilityActionEvent } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, type AccessibilityActionEvent } from 'react-native';
 import Sortable from 'react-native-sortables';
 
 import { formatProgressLine } from '@/domain/format';
@@ -114,10 +114,35 @@ export function TaskCard({ view, reorder }: { view: TaskView; reorder?: CardReor
   );
 }
 
+/** On the web build (the Windows app) cards are dragged by a handle, not a long press. */
+export const WEB_DRAG_HANDLE = Platform.OS === 'web';
+
+/** The part of a DOM keyboard event the card reads. */
+type WebKeyEvent = { key: string; altKey: boolean; preventDefault: () => void };
+
+/** Six dots, the usual sign that a row can be moved. */
+function Grip() {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.grip}>
+      {[0, 1, 2].map((row) => (
+        <View key={row} style={styles.gripRow}>
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /**
  * A card inside Sortable.Grid (Home): a tap opens the task, a long press picks
  * it up to drag. Taps go through Sortable.Touchable so they don't fight the
  * drag gesture. Screen readers get "move up/down" actions instead of dragging.
+ *
+ * With a mouse there's no long press (people press and pull at once, which a hold
+ * delay cancels), so the Windows app drags by a handle on the card's left edge,
+ * and the keyboard works too: Enter opens (react-native-web does that itself), Alt+↑ / Alt+↓ moves.
  */
 function SortableCard(props: {
   label: string;
@@ -136,6 +161,14 @@ function SortableCard(props: {
     ...(index < count - 1 ? [{ name: 'moveDown', label: t('home.moveDown', { name: props.name }) }] : []),
   ];
 
+  function onKeyDown(event: WebKeyEvent) {
+    const { key, altKey } = event;
+    if (altKey && key === 'ArrowUp' && index > 0) onMove(-1);
+    else if (altKey && key === 'ArrowDown' && index < count - 1) onMove(1);
+    else return;
+    event.preventDefault();
+  }
+
   function onAction(event: AccessibilityActionEvent) {
     const action = event.nativeEvent.actionName;
     if (action === 'activate') props.onOpen();
@@ -148,14 +181,21 @@ function SortableCard(props: {
       onTap={props.onOpen}
       onTouchesDown={() => setPressed(true)}
       onTouchesUp={() => setPressed(false)}
-      style={[styles.card, pressed && styles.held]}
+      style={[styles.card, WEB_DRAG_HANDLE && styles.cardWithHandle, pressed && styles.held]}
       accessible
       accessibilityRole="button"
       accessibilityLabel={props.label}
-      accessibilityHint={t('home.dragHint')}
+      accessibilityHint={t(WEB_DRAG_HANDLE ? 'home.dragHintHandle' : 'home.dragHint')}
       accessibilityActions={actions}
       onAccessibilityAction={onAction}
+      // react-native-web passes keyboard handlers on; React Native's types don't know them.
+      {...(WEB_DRAG_HANDLE ? ({ onKeyDown } as object) : {})}
     >
+      {WEB_DRAG_HANDLE ? (
+        <Sortable.Handle style={styles.handle}>
+          <Grip />
+        </Sortable.Handle>
+      ) : null}
       {props.children}
     </Sortable.Touchable>
   );
@@ -171,6 +211,10 @@ function makeStyles(c: Colors) {
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
     },
+    // Room for the drag handle on the left edge.
+    cardWithHandle: {
+      paddingLeft: spacing.lg + 12,
+    },
     inactive: {
       opacity: 0.75,
     },
@@ -185,6 +229,31 @@ function makeStyles(c: Colors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
+    },
+    // The handle sits on the card's left edge, over its padding, and is as tall as the card.
+    handle: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      // 'grab' is a web cursor that React Native's types leave out.
+      cursor: 'grab' as never,
+    },
+    grip: {
+      gap: 3,
+    },
+    gripRow: {
+      flexDirection: 'row',
+      gap: 3,
+    },
+    dot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: c.textMuted,
     },
     text: {
       flex: 1,

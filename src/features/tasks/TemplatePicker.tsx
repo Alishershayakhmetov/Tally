@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { HorizontalScroll } from '@/components/HorizontalScroll';
 import { TaskBadge } from '@/components/TaskBadge';
 import { TEMPLATES, type TemplateId } from '@/domain/templates';
 import { useThemedStyles } from '@/lib/theme';
@@ -20,9 +21,7 @@ export function TemplatePicker({ selected, onSelect }: Props) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{t('templates.title')}</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      <HorizontalScroll
         testID="template-picker"
         contentContainerStyle={styles.row}
         accessibilityRole="radiogroup"
@@ -45,7 +44,7 @@ export function TemplatePicker({ selected, onSelect }: Props) {
             onPress={() => onSelect(template.id)}
           />
         ))}
-      </ScrollView>
+      </HorizontalScroll>
     </View>
   );
 }
