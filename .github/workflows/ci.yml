@@ -14,8 +14,9 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
+          # Pinned like eas.json: a newer npm wants @emnapi/* entries that npm 11.6.2 (this lockfile) omits.
           # node:sqlite (used by the day-cutoff parity test) needs Node 22.5+
-          node-version: 24
+          node-version: 24.13.0
           cache: npm
       - run: npm ci
       - run: npm run typecheck
@@ -38,7 +39,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 24.13.0
           cache: npm
           cache-dependency-path: |
             package-lock.json
