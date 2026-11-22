@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { MAX_NOTE_LENGTH } from '@/domain/notes';
+import { MAX_NOTE_LENGTH, NOTE_PREVIEW_LENGTH } from '@/domain/notes';
 import { useColors, useThemedStyles } from '@/lib/theme';
 import { radius, spacing, type Colors } from '@/theme';
 
@@ -11,11 +11,10 @@ type Props = {
   /** Quick chips; tapping one replaces the text. */
   suggestions: readonly string[];
   autoFocus?: boolean;
-  onSubmitEditing?: () => void;
 };
 
-/** A short free-text note plus quick chips ("Felt tired", "New record", recent notes). */
-export function NoteField({ value, onChange, suggestions, autoFocus, onSubmitEditing }: Props) {
+/** A free-text note, a few words or several lines, plus quick chips ("Felt tired", "New record", recent notes). */
+export function NoteField({ value, onChange, suggestions, autoFocus }: Props) {
   const { t } = useTranslation();
   const colors = useColors();
   const styles = useThemedStyles(makeStyles);
@@ -26,16 +25,18 @@ export function NoteField({ value, onChange, suggestions, autoFocus, onSubmitEdi
       <TextInput
         value={value}
         onChangeText={onChange}
-        onSubmitEditing={onSubmitEditing}
         placeholder={t('notes.placeholder')}
         placeholderTextColor={colors.textMuted}
         maxLength={MAX_NOTE_LENGTH}
         autoFocus={autoFocus}
-        returnKeyType="done"
-        submitBehavior="blurAndSubmit"
+        multiline
+        textAlignVertical="top"
         style={styles.input}
         accessibilityLabel={t('notes.label')}
       />
+      {value.length > NOTE_PREVIEW_LENGTH ? (
+        <Text style={styles.count}>{t('notes.count', { count: value.length, max: MAX_NOTE_LENGTH })}</Text>
+      ) : null}
       {suggestions.length > 0 ? (
         <View style={styles.chips}>
           {suggestions.map((suggestion) => {
@@ -74,6 +75,14 @@ function makeStyles(c: Colors) {
       fontSize: 16,
       color: c.text,
       minWidth: 0,
+      minHeight: 84,
+      maxHeight: 160,
+    },
+    count: {
+      alignSelf: 'flex-end',
+      fontSize: 12,
+      color: c.textMuted,
+      fontVariant: ['tabular-nums'],
     },
     chips: {
       flexDirection: 'row',

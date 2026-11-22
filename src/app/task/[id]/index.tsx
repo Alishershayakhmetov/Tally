@@ -1,11 +1,13 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmountDialog } from '@/components/AmountDialog';
 import { NoteDialog } from '@/components/NoteDialog';
+import { NoteSheet } from '@/components/NoteSheet';
+import { NoteText } from '@/components/NoteText';
 import { ProgressBar } from '@/components/ProgressBar';
 import { TaskBadge } from '@/components/TaskBadge';
 import { UndoBar } from '@/components/UndoBar';
@@ -75,6 +77,9 @@ function Counter({ view }: { view: TaskView }) {
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [noteFor, setNoteFor] = useState<Entry | null>(null);
+  const [noteOpen, setNoteOpen] = useState<{ entry: Entry; top: number | undefined } | null>(null);
+  const [descriptionOpen, setDescriptionOpen] = useState<{ top: number | undefined } | null>(null);
+  const heroRef = useRef<View>(null);
   const noteSuggestions = useNoteSuggestions();
 
   const canLog = lifecycle === 'active';
@@ -117,6 +122,20 @@ function Counter({ view }: { view: TaskView }) {
   function describeEntry(entry: Entry): string {
     const time = formatClock(entry.occurredAt, entry.utcOffsetMin);
     return `${signed(entry.amount)}${unit} · ${formatDay(t, entry.localDate, today)} · ${time}`;
+  }
+
+  /** Opens a long note in its sheet, whose top edge is the bottom of the counter above it. */
+  function belowCounter(open: (top: number | undefined) => void) {
+    if (heroRef.current) heroRef.current.measureInWindow((_x, y, _w, h) => open(y + h));
+    else open(undefined);
+  }
+
+  function showNote(entry: Entry) {
+    belowCounter((top) => setNoteOpen({ entry, top }));
+  }
+
+  function showDescription() {
+    belowCounter((top) => setDescriptionOpen({ top }));
   }
 
   function noteLastChange() {
@@ -183,7 +202,7 @@ function Counter({ view }: { view: TaskView }) {
           </View>
         ) : null}
 
-        <View style={styles.hero}>
+        <View ref={heroRef} collapsable={false} style={styles.hero}>
           <TaskBadge emoji={task.emoji} name={task.name} color={task.color} size={52} />
           {hero.label ? <Text style={styles.window}>{hero.label}</Text> : null}
           <Text
@@ -207,6 +226,17 @@ function Counter({ view }: { view: TaskView }) {
           ) : null}
           {streak ? <Text style={styles.allTime}>{streak}</Text> : null}
         </View>
+
+        {task.description ? (
+          <View style={styles.description}>
+            <NoteText
+              note={task.description}
+              style={styles.descriptionText}
+              onShowAll={showDescription}
+              quoted={false}
+            />
+          </View>
+        ) : null}
 
         {isTime ? (
           <TimerPanel
@@ -306,7 +336,9 @@ function Counter({ view }: { view: TaskView }) {
                     </Text>
                     <SourceTag source={entry.source} />
                   </View>
-                  {entry.note ? <Text style={styles.note}>“{entry.note}”</Text> : null}
+                  {entry.note ? (
+                    <NoteText note={entry.note} style={styles.note} onShowAll={() => showNote(entry)} />
+                  ) : null}
                 </Pressable>
               ))}
               <Text style={styles.hint}>{t('counter.longPressHint')}</Text>
@@ -341,6 +373,29 @@ function Counter({ view }: { view: TaskView }) {
           onUndo={undo}
           onTimeout={dismissUndo}
           action={{ label: t('notes.add'), onPress: noteLastChange }}
+        />
+      ) : null}
+
+      {descriptionOpen && task.description ? (
+        <NoteSheet
+          title={task.name}
+          note={task.description}
+          color={task.color}
+          top={descriptionOpen.top}
+          editLabel={t('form.editDescription')}
+          onEdit={() => router.push({ pathname: '/task/[id]/edit', params: { id: task.id } })}
+          onClose={() => setDescriptionOpen(null)}
+        />
+      ) : null}
+
+      {noteOpen?.entry.note ? (
+        <NoteSheet
+          subtitle={describeEntry(noteOpen.entry)}
+          note={noteOpen.entry.note}
+          color={task.color}
+          top={noteOpen.top}
+          onEdit={() => setNoteFor(noteOpen.entry)}
+          onClose={() => setNoteOpen(null)}
         />
       ) : null}
 
@@ -388,6 +443,18 @@ function makeStyles(c: Colors) {
       fontWeight: '600',
     },
     // The web header leaves the right button against the window's edge (the native one pads it).
+    description: {
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: spacing.md,
+    },
+    descriptionText: {
+      fontSize: 15,
+      lineHeight: 22,
+      color: c.text,
+    },
     headerButton: {
       marginRight: Platform.OS === 'web' ? spacing.lg : 0,
     },

@@ -66,6 +66,7 @@ export const UPSERT_TASK = upsert<BackupTask>('tasks', 'id', [
   ['end_date', 'endDate'],
   ['increments', 'increments'],
   ['reminder_time', 'reminderTime'],
+  ['description', 'description'],
   ['day_start_min', 'dayStartMin'],
   ['sort_order', 'sortOrder'],
   ['archived_at', 'archivedAt'],

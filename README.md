@@ -63,10 +63,13 @@ Built with Expo SDK 57 (React Native 0.86, TypeScript, Expo Router) and Drizzle 
 
 - **Reorder** tasks on Home (since Phase 8 by dragging; see below). Each move rewrites only the moved task's position.
 - **Templates:** New task starts with a row of 8 ready-made goals (100 push-ups a day, 1000 squats in 30 days, 8 glasses of water, run 20 km a week, plank 5 min, read 20 pages, cycle 300 km a month, meditate 10 min). Picking one fills the form, and you can change anything before saving.
+- **Description of the task** (added later): a free-text field on the New/Edit task form, right under the name, for what the goal is, why, and the rules you set yourself (up to 2000 characters, line breaks kept). A short one shows in a card under the counter; a long one shows two lines and **Show all ›**, which slides a sheet up from the bottom. The sheet stops under the counter, so the number stays in view. **Edit task** in the sheet opens the form. It travels in backups and Dropbox sync, and "Do it again" copies it. A Tally from before this change ignores the description in a backup or sync file (it doesn't show it and doesn't pass it on), so update every device.
 - **Notes on entries** ("felt tired", "new record"):
   - Add one from the Undo bar right after logging, while typing an amount, by tapping a recent entry, or in History.
   - Quick chips offer your recent notes and a few suggestions.
   - Notes are included in backups, and older backup files without notes still import.
+  - **Long notes** (up to 2000 characters, with line breaks): the note field grows to several lines. On the counter screen and in History a long note shows two lines and **Show all ›**, which slides a sheet up from the bottom. It stops under the counter, so the number stays in view; it scrolls, its text can be selected, and **Edit note** opens the editor. Close with the button, a tap outside it, or Back. With "reduce motion" on, it appears without sliding.
+  - Backups and Dropbox sync carry long notes too. A copy of Tally from before this change (limit 140) rejects a file with a longer note, so update every device.
 
 **Quick logging and overview (Phase 6)**
 

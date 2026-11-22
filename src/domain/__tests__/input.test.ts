@@ -89,6 +89,7 @@ describe('validateTaskForm', () => {
     endDate: null,
     dayStartMin: null,
     reminderTime: null,
+    description: '',
   };
 
   it('trims and converts a valid form', () => {
@@ -107,8 +108,16 @@ describe('validateTaskForm', () => {
         endDate: null,
         dayStartMin: null,
         reminderTime: null,
+        description: null,
       },
     });
+  });
+
+  it('keeps a description, with its line breaks, and turns a blank one into none', () => {
+    const text = validateTaskForm({ ...valid, description: '  Why:  health\n\n\nHow: daily  ' }, TODAY);
+    expect(text.ok && text.value.description).toBe('Why: health\n\nHow: daily');
+    const blank = validateTaskForm({ ...valid, description: ' \n ' }, TODAY);
+    expect(blank.ok && blank.value.description).toBeNull();
   });
 
   it('reads a time goal target as minutes or h:mm:ss and drops the unit label', () => {

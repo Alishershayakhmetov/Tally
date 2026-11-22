@@ -27,6 +27,7 @@ const BLANK: TaskFormValues = {
   endDate: null,
   dayStartMin: null,
   reminderTime: null,
+  description: '',
 };
 
 /** `from` (a finished task's id) opens a copy of it for "Do it again" instead of the templates. */

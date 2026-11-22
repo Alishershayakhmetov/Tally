@@ -53,6 +53,7 @@ const FORM: ValidTaskForm = {
   endDate: null,
   dayStartMin: null,
   reminderTime: null,
+  description: null,
 };
 
 (database ? describe : describe.skip)('SQLite through the desktop bridge', () => {

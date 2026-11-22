@@ -191,7 +191,7 @@ entries
   utc_offset_min   INTEGER NOT NULL -- device UTC offset at log time; immutable
   local_date       TEXT NOT NULL    -- DERIVED CACHE: logical date under the task's
                                     -- current effective cutoff, 'YYYY-MM-DD'
-  note             TEXT             -- optional, ≤ 140 chars (Phase 5, migration 0003)
+  note             TEXT             -- optional, ≤ 2000 chars (Phase 5, migration 0003; 140 until 2026-11-23)
   created_at, updated_at, deleted_at
   INDEX (task_id, local_date) WHERE deleted_at IS NULL
 
@@ -383,6 +383,17 @@ Each phase ends with verification **on the real Android phone**, not just "it co
   - **Quick chips:** the user's most recent distinct notes first, then built-in suggestions ("Felt tired", "New record", "Felt great", "Short on time"). Tapping a chip fills the note; tapping it again clears it.
   - Notes show in italics under the entry on the counter screen and in History.
   - **Backups:** notes are included. Files from before Phase 5 have no `note` and still import, as null. That's why the format number stays 1.
+- **Task description (added 2026-11-23, asked for as "a note on the task, not on entries"):** `tasks.description` (migration 0005, nullable text, up to 2000 characters, same normalisation as notes: line breaks kept, runs of spaces collapsed).
+  - **Form:** a multiline field under the name (minimum height 96, scrolls after 220). `ValidTaskForm.description` is null when blank.
+  - **Task page:** a card between the counter and the buttons, only when there is a description. Short ones show in full; long ones (`isLongNote`) show a two-line preview (line breaks run together) and "Show all ›", which opens the same `NoteSheet` as the entry notes, titled with the task's name. The sheet's top edge is the bottom of the counter block, so the number stays in view. Its button is **Edit task**.
+  - **Backup and sync:** `BackupTask.description`, validated (null or text up to 2000) and listed in `LATER_FIELDS`, so a file without it imports as null; the SQL upsert carries it, and a newer `updated_at` wins like any task field. A Tally without this field ignores it (`pick` copies only the fields it knows), so such a device shows no description and won't pass it on, but doesn't fail. Format number stays 1. (Long entry notes are different: an older Tally rejects a file with a note over 140 characters.)
+  - **Checked** in the Windows app: filled in the form, previewed, opened in the sheet, reopened in the Edit form with the text intact. Tests: form validation, backup with and without the field, SQL round trip. Not run on a phone yet.
+- **Long notes (added 2026-11-23):** the 140-character limit became 2000, and line breaks are kept (runs of spaces collapse, at most one blank line in a row).
+  - **Preview:** a note longer than 80 characters or with a line break (`isLongNote`) shows two lines and "Show all ›" on the counter screen and in History. Shorter notes show in full, as before. Long notes are not offered as quick chips (over 40 characters or several lines).
+  - **The sheet** (`NoteSheet`, a transparent `Modal` animated by Reanimated, 340 ms up, 240 ms down; instant with reduce-motion): it rises from the bottom and its top edge is the bottom of the counter block (measured with `measureInWindow`), so the number and its progress bar stay in view and the rest of the task is covered. History has no counter, so its sheet starts about a third down. Scrim, Close, Back and a tap outside close it; **Edit note** closes it and opens the editor (History: the amount dialog). Width is capped at 720 like the rest of the desktop layout.
+  - **Editor:** the note field is multiline (Enter makes a new line, so there's no submit-on-Enter), shows a length counter past 80 characters, and scrolls inside after 160 px.
+  - **Compatibility:** the backup and sync validators accept 2000, so a file with a long note is rejected as invalid by a Tally older than this change. The format number stays 1.
+  - **Checked** in the Windows app against an imported long note: preview, sheet position under the counter, mid-animation, Close, Edit note. Not run on a phone yet.
 - **Done when:** unit tests cover note normalisation and suggestions, every move case (edges, gaps, ties, 200 halvings of one gap), and that every template fills a valid form in both languages. The SQL tests run migration 0003 and import a note.
   - On the phone: reorder survives a restart, a template creates a working task, and a note added from the Undo bar shows in History.
 

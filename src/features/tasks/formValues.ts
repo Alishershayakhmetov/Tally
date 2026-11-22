@@ -20,6 +20,7 @@ export function taskFormValues(task: Task): TaskFormValues {
     endDate: task.endDate,
     dayStartMin: task.dayStartMin,
     reminderTime: task.reminderTime,
+    description: task.description ?? '',
   };
 }
 

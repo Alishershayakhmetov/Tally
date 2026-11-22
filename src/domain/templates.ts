@@ -120,5 +120,6 @@ export function templateForm(
     endDate: template.days !== undefined ? addDays(startDate, template.days - 1) : null,
     dayStartMin: null,
     reminderTime: null,
+    description: '',
   };
 }

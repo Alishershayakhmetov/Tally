@@ -22,6 +22,8 @@ export const tasks = sqliteTable('tasks', {
   endDate: text('end_date'),
   increments: text('increments', { mode: 'json' }).$type<number[]>().notNull(),
   reminderTime: text('reminder_time'),
+  /** Free text about the task itself (what, why, how), up to MAX_NOTE_LENGTH. */
+  description: text('description'),
   dayStartMin: integer('day_start_min'),
   sortOrder: real('sort_order').notNull(),
   archivedAt: integer('archived_at'),

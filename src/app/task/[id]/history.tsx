@@ -5,6 +5,8 @@ import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmountDialog } from '@/components/AmountDialog';
+import { NoteSheet } from '@/components/NoteSheet';
+import { NoteText } from '@/components/NoteText';
 import { useLive } from '@/db/live';
 import { listEntries, softDeleteEntry, updateEntry } from '@/db/repos/entries';
 import { getTask, todayFor } from '@/db/repos/tasks';
@@ -47,6 +49,7 @@ export default function HistoryScreen() {
   const task = useLive(() => getTask(id));
   const entries = useLive(() => listEntries(id));
   const [editing, setEditing] = useState<Entry | null>(null);
+  const [reading, setReading] = useState<Entry | null>(null);
   const noteSuggestions = useNoteSuggestions();
   if (!task) return null;
 
@@ -108,10 +111,21 @@ export default function HistoryScreen() {
               <Text style={styles.time}>{formatClock(item.occurredAt, item.utcOffsetMin)}</Text>
               <SourceTag source={item.source} />
             </View>
-            {item.note ? <Text style={styles.note}>“{item.note}”</Text> : null}
+            {item.note ? (
+              <NoteText note={item.note} style={styles.note} onShowAll={() => setReading(item)} />
+            ) : null}
           </Pressable>
         )}
       />
+      {reading?.note ? (
+        <NoteSheet
+          subtitle={`${signed(reading.amount)} · ${formatDay(t, reading.localDate, today)} · ${formatClock(reading.occurredAt, reading.utcOffsetMin)}`}
+          note={reading.note}
+          color={task.color}
+          onEdit={() => setEditing(reading)}
+          onClose={() => setReading(null)}
+        />
+      ) : null}
       {editing ? (
         <AmountDialog
           title={t('amount.editTitle')}

@@ -9,6 +9,7 @@ import {
   type BackupTask,
   type LocalVersions,
 } from '../backup';
+import { MAX_NOTE_LENGTH } from '../notes';
 
 const task: BackupTask = {
   id: 'task-1',
@@ -24,6 +25,7 @@ const task: BackupTask = {
   endDate: '2026-10-31',
   increments: [-1, 1, 5, 10],
   reminderTime: '19:30',
+  description: 'Do it after the warm-up.\nFull sets only.',
   dayStartMin: 240,
   sortOrder: 1,
   archivedAt: null,
@@ -149,11 +151,32 @@ describe('notes (added in Phase 5)', () => {
   });
 
   it('rejects a note longer than the app allows', () => {
-    expect(parse(backup({ entries: [{ ...entry, note: 'x'.repeat(141) }] }))).toMatchObject({
+    expect(parse(backup({ entries: [{ ...entry, note: 'x'.repeat(MAX_NOTE_LENGTH + 1) }] }))).toMatchObject({
       detail: 'entries[0].note',
     });
     expect(parse(backup({ entries: [{ ...entry, note: 42 as never }] }))).toMatchObject({
       detail: 'entries[0].note',
+    });
+  });
+});
+
+describe('task descriptions (added after notes)', () => {
+  it('imports a file written before descriptions existed, with a null description', () => {
+    const { description: _description, ...without } = task;
+    const parsed = parse(backup({ tasks: [without as BackupTask] }));
+    expect(parsed.ok && parsed.backup.tasks[0].description).toBeNull();
+  });
+
+  it('keeps a description and rejects one that is too long or not text', () => {
+    const parsed = parse(backup());
+    expect(parsed.ok && parsed.backup.tasks[0].description).toBe(task.description);
+    expect(
+      parse(backup({ tasks: [{ ...task, description: 'x'.repeat(MAX_NOTE_LENGTH + 1) }] })),
+    ).toMatchObject({
+      detail: 'tasks[0].description',
+    });
+    expect(parse(backup({ tasks: [{ ...task, description: 7 as never }] }))).toMatchObject({
+      detail: 'tasks[0].description',
     });
   });
 });

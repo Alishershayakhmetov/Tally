@@ -123,6 +123,7 @@ describe('backup import SQL (SPEC §10, Phase 3)', () => {
     endDate: null,
     increments: [-1, 1, 5, 10],
     reminderTime: null,
+    description: null,
     dayStartMin: 240,
     sortOrder: 1,
     archivedAt: null,
@@ -146,7 +147,7 @@ describe('backup import SQL (SPEC §10, Phase 3)', () => {
   function importedDb() {
     const db = migratedDb();
     db.exec('PRAGMA foreign_keys = ON');
-    db.prepare(UPSERT_TASK.sql).run(UPSERT_TASK.params(task));
+    db.prepare(UPSERT_TASK.sql).run(UPSERT_TASK.params({ ...task, description: null }));
     db.prepare(UPSERT_TASK.sql).run(UPSERT_TASK.params({ ...task, id: 'squats', dayStartMin: null }));
     db.prepare(UPSERT_ENTRY.sql).run(UPSERT_ENTRY.params(entry));
     db.prepare(UPSERT_ENTRY.sql).run(UPSERT_ENTRY.params({ ...entry, id: 'squats-night', taskId: 'squats' }));
@@ -162,6 +163,7 @@ describe('backup import SQL (SPEC §10, Phase 3)', () => {
     expect(row(db, 'tasks', 'pushups')).toMatchObject({
       name: 'Push-ups',
       increments: '[-1,1,5,10]',
+      description: null,
       day_start_min: 240,
       updated_at: 2000,
       deleted_at: null,
@@ -177,6 +179,13 @@ describe('backup import SQL (SPEC §10, Phase 3)', () => {
     const db = importedDb();
     expect(dayOf(db, 'late-night')).toBe('2026-09-28'); // own cutoff 04:00
     expect(dayOf(db, 'squats-night')).toBe('2026-09-29'); // global 00:00
+  });
+
+  it('stores a task description, line breaks included', () => {
+    const db = importedDb();
+    const text = 'Why: health' + String.fromCharCode(10) + 'How: daily';
+    db.prepare(UPSERT_TASK.sql).run(UPSERT_TASK.params({ ...task, description: text, updatedAt: 2500 }));
+    expect(row(db, 'tasks', 'pushups').description).toBe(text);
   });
 
   it('replaces a row only when the incoming version is newer', () => {

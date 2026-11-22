@@ -1,3 +1,4 @@
+import { normalizeNote } from './notes';
 import { parseDurationIn, type DurationUnit, type Measure } from './measure';
 import type { Recurrence } from './periods';
 import { parseReminderTime } from './reminders';
@@ -147,6 +148,8 @@ export type TaskFormValues = {
   dayStartMin: number | null;
   /** 'HH:MM', or null for no reminder. */
   reminderTime: string | null;
+  /** Free text about the task; empty means none. */
+  description: string;
 };
 
 export type ValidTaskForm = {
@@ -163,6 +166,7 @@ export type ValidTaskForm = {
   endDate: string | null;
   dayStartMin: number | null;
   reminderTime: string | null;
+  description: string | null;
 };
 
 export type TaskFormField =
@@ -215,6 +219,7 @@ export function validateTaskForm(
       endDate: values.endDate,
       dayStartMin: values.dayStartMin,
       reminderTime: values.reminderTime,
+      description: normalizeNote(values.description),
     },
   };
 }

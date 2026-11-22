@@ -37,13 +37,7 @@ export function NoteDialog({ subtitle, initial, suggestions, color, onSave, onCl
         <View style={styles.card}>
           <Text style={styles.title}>{initial ? t('notes.editTitle') : t('notes.addTitle')}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
-          <NoteField
-            value={text}
-            onChange={setText}
-            suggestions={suggestions}
-            autoFocus
-            onSubmitEditing={() => save(text)}
-          />
+          <NoteField value={text} onChange={setText} suggestions={suggestions} autoFocus />
           <View style={styles.actions}>
             {initial ? (
               <Pressable onPress={() => save(null)} style={styles.secondary} accessibilityRole="button">

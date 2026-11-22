@@ -1,12 +1,12 @@
 import { TASK_COLORS, TASK_EMOJIS } from '../../theme';
 import { validateTaskForm } from '../input';
-import { MAX_NOTE_LENGTH, noteSuggestions, normalizeNote } from '../notes';
+import { isLongNote, MAX_NOTE_LENGTH, noteSuggestions, normalizeNote } from '../notes';
 import { moveItem, type Ordered } from '../order';
 import { TEMPLATES, templateForm } from '../templates';
 
 describe('normalizeNote', () => {
   it('trims and collapses whitespace, including newlines', () => {
-    expect(normalizeNote('  felt   tired \n today ')).toBe('felt tired today');
+    expect(normalizeNote('  felt   tired \n today ')).toBe('felt tired\ntoday');
   });
 
   it('turns empty or missing text into null', () => {
@@ -20,7 +20,18 @@ describe('normalizeNote', () => {
     const long = `${'a'.repeat(MAX_NOTE_LENGTH - 1)} bcd`;
     const note = normalizeNote(long);
     expect(note).toBe('a'.repeat(MAX_NOTE_LENGTH - 1));
-    expect(normalizeNote('x'.repeat(500))).toHaveLength(MAX_NOTE_LENGTH);
+    expect(normalizeNote('x'.repeat(MAX_NOTE_LENGTH + 500))).toHaveLength(MAX_NOTE_LENGTH);
+  });
+
+  it('keeps line breaks, with at most one blank line in a row', () => {
+    expect(normalizeNote('one\r\ntwo\n\n\n\n three \t four')).toBe('one\ntwo\n\nthree four');
+  });
+
+  it('decides which notes are previewed', () => {
+    expect(isLongNote('felt tired')).toBe(false);
+    expect(isLongNote('a'.repeat(80))).toBe(false);
+    expect(isLongNote('a'.repeat(81))).toBe(true);
+    expect(isLongNote('two\nlines')).toBe(true);
   });
 });
 
@@ -29,6 +40,10 @@ describe('noteSuggestions', () => {
     expect(
       noteSuggestions(['Knee hurt', 'new record', 'Knee hurt '], ['Felt tired', 'New record', 'Felt great']),
     ).toEqual(['Knee hurt', 'new record', 'Felt tired', 'Felt great']);
+  });
+
+  it('leaves long notes out of the chips', () => {
+    expect(noteSuggestions(['a'.repeat(41), 'two\nlines', 'short'], [])).toEqual(['short']);
   });
 
   it('stops at the limit', () => {

@@ -20,6 +20,7 @@ import { TimeStepper } from '@/components/TimeStepper';
 import { WeekdayPicker } from '@/components/WeekdayPicker';
 import { useSettings } from '@/db/settings';
 import { formatSigned } from '@/domain/format';
+import { MAX_NOTE_LENGTH } from '@/domain/notes';
 import {
   parseIncrements,
   validateTaskForm,
@@ -162,6 +163,20 @@ export function TaskForm({
           maxLength={60}
           style={styles.input}
           accessibilityLabel={t('form.name')}
+        />
+      </Field>
+
+      <Field label={t('form.description')} hint={t('form.descriptionHint')}>
+        <TextInput
+          value={values.description}
+          onChangeText={(text) => set('description', text)}
+          placeholder={t('form.descriptionPlaceholder')}
+          placeholderTextColor={colors.textMuted}
+          maxLength={MAX_NOTE_LENGTH}
+          multiline
+          textAlignVertical="top"
+          style={[styles.input, styles.descriptionInput]}
+          accessibilityLabel={t('form.description')}
         />
       </Field>
 
@@ -511,6 +526,10 @@ function makeStyles(c: Colors) {
       paddingVertical: spacing.md,
       fontSize: 16,
       color: c.text,
+    },
+    descriptionInput: {
+      minHeight: 96,
+      maxHeight: 220,
     },
     targetRow: {
       flexDirection: 'row',

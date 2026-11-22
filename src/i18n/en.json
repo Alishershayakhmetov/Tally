@@ -314,6 +314,10 @@
     "placeholderTime": "e.g. 25 or 1:30"
   },
   "form": {
+    "editDescription": "Edit task",
+    "description": "Description",
+    "descriptionPlaceholder": "What it is, why, how (optional)",
+    "descriptionHint": "Shown on the task page. A long one opens in a sheet.",
     "name": "Name",
     "namePlaceholder": "Push-ups",
     "goal": "Goal",
@@ -500,6 +504,9 @@
     "addTitle": "Add a note",
     "editTitle": "Edit note",
     "remove": "Remove",
+    "showAll": "Show all",
+    "close": "Close",
+    "count": "{{count}} / {{max}}",
     "suggestions": ["Felt tired", "New record", "Felt great", "Short on time"]
   },
   "templates": {

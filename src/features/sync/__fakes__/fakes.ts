@@ -18,6 +18,7 @@ export function task(id: string, updatedAt: number, extra: Partial<BackupTask> =
     endDate: null,
     increments: [1],
     reminderTime: null,
+    description: null,
     dayStartMin: null,
     sortOrder: 1,
     archivedAt: null,

@@ -28,6 +28,8 @@ export type BackupTask = {
   endDate: string | null;
   increments: number[];
   reminderTime: string | null;
+  /** Added after format 1 was first written; older files have none and import with null. */
+  description: string | null;
   dayStartMin: number | null;
   sortOrder: number;
   archivedAt: number | null;
@@ -128,6 +130,7 @@ const TASK_FIELDS: Record<keyof BackupTask, Check> = {
   increments: (v) =>
     Array.isArray(v) && v.length >= 1 && v.length <= MAX_INCREMENTS && v.every((n) => isAmount(n) && n !== 0),
   reminderTime: nullable((v) => typeof v === 'string' && parseReminderTime(v) !== null),
+  description: nullable((v) => typeof v === 'string' && v.length <= MAX_NOTE_LENGTH),
   dayStartMin: nullable((v) => typeof v === 'number' && isValidDayStart(v)),
   sortOrder: (v) => typeof v === 'number' && Number.isFinite(v),
   archivedAt: nullable(isTimestamp),
@@ -156,7 +159,7 @@ const SETTING_FIELDS: Record<keyof BackupSetting, Check> = {
 };
 
 /** Fields added after format 1 was first written: a missing one means null, not an error. */
-const LATER_FIELDS = new Set(['note']);
+const LATER_FIELDS = new Set(['note', 'description']);
 
 /** Copies exactly the known fields, so extra properties in the file never reach SQL. */
 function pick<T>(raw: unknown, fields: Record<keyof T & string, Check>, path: string): T | string {

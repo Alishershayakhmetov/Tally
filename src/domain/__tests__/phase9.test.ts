@@ -105,6 +105,7 @@ describe('parsing time input with a unit', () => {
       endDate: null,
       dayStartMin: null,
       reminderTime: null,
+      description: '',
     };
     const result = validateTaskForm(form, '2026-10-12');
     expect(result.ok && result.value.target).toBe(5400);
@@ -128,6 +129,7 @@ const task: BackupTask = {
   endDate: null,
   increments: [1, 5],
   reminderTime: null,
+  description: null,
   dayStartMin: null,
   sortOrder: 1,
   archivedAt: null,
