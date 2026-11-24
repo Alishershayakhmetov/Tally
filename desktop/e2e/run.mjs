@@ -273,6 +273,37 @@ check('a task page is centred and its header button keeps a margin', async ({ pa
   await pause(page);
 });
 
+check(
+  'a description opens in a sheet that closes before Edit task, and the form stays usable',
+  async ({ page }) => {
+    const long = Array(12).fill('Why: strength.').join(' ') + '\n\nHow: every morning.';
+    await cards(page).nth(0).click();
+    await pause(page, 800);
+    await visible(page.getByRole('button', { name: 'Edit', exact: true })).click();
+    await pause(page, 600);
+    await visible(page.getByLabel('Description', { exact: true })).fill(long);
+    await visible(page.getByText('Save changes', { exact: true })).click();
+    await pause(page, 800);
+    await visible(page.getByText(/Show all/)).click();
+    await pause(page, 800);
+    await visible(page.getByText('Edit task', { exact: true })).click();
+    await pause(page, 900);
+    assert.equal(
+      await page.getByText('Close', { exact: true }).filter({ visible: true }).count(),
+      0,
+      'the sheet is still open',
+    );
+    const field = visible(page.getByLabel('Description', { exact: true }));
+    assert.equal(await field.inputValue(), long);
+    await field.fill('');
+    assert.equal(await field.inputValue(), '', 'the form takes no input: a sheet is still covering it');
+    await visible(page.getByText('Save changes', { exact: true })).click();
+    await pause(page, 800);
+    await page.goBack();
+    await pause(page);
+  },
+);
+
 check('exports a backup with the local time and offset, and imports it again', async ({ page }) => {
   await visible(page.getByText('Settings')).click();
   await pause(page, 500);

@@ -105,7 +105,13 @@ export function NoteSheet({ title, subtitle, note, color, top, editLabel, onEdit
               <Text style={styles.secondaryText}>{t('notes.close')}</Text>
             </Pressable>
             <Pressable
-              onPress={() => close(onEdit)}
+              onPress={() =>
+                close(() => {
+                  // The sheet is a Modal: left mounted it would sit over the screen Edit opens.
+                  onClose();
+                  onEdit();
+                })
+              }
               style={[styles.primary, { backgroundColor: color }]}
               accessibilityRole="button"
             >
